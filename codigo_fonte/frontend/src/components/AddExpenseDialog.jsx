@@ -15,14 +15,13 @@ function AddExpenseDialog({
   paymentType,
 }) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState("");
-  const compatibleMethods = useMemo(
-    () => paymentMethods,
-    [paymentMethods]
-  );
+  const compatibleMethods = paymentMethods;
   const today = new Date().toLocaleDateString("en-CA");
 
   useEffect(() => {
-    if (!open) return;
+    if(!open) return;
+
+    if(selectedPaymentMethod) return;
 
     const favorite = compatibleMethods.find((method) => method.is_favorite);
     setSelectedPaymentMethod(favorite ? favorite.id.toString() : "");

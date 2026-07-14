@@ -44,7 +44,7 @@ function Home() {
 
   useEffect(() => {
     loadDashboard();
-  }, [loadDashboard]);
+  }, []);
 
   const updatePaymentMethods = (updatedMethods) => {
     setPaymentMethods(updatedMethods);
