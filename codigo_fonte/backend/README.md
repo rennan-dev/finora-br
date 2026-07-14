@@ -11,6 +11,12 @@ API Laravel 12 para o aplicativo de finanças pessoais. Usa MySQL/MariaDB e Lara
 
 ## Instalação local
 
+PHP 8.2
+```
+composer update -vvv
+```
+
+PHP 8.4
 ```bash
 composer install
 cp .env.example .env
