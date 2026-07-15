@@ -160,7 +160,6 @@ function Dashboard({ expenses, invoices, paymentMethods, totalBalance, onUpdateB
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="font-semibold">Movimentações</h2>
-            <p className="text-sm text-muted-foreground">Compras no crédito aparecem na data em que foram feitas.</p>
           </div>
           <MonthSelector selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
         </div>
