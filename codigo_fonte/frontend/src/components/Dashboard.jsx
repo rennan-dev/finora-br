@@ -114,7 +114,15 @@ function Dashboard({ expenses, invoices, paymentMethods, totalBalance, onUpdateB
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius="75%" label>
+                  <Pie 
+                    data={chartData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="45%" 
+                    outerRadius="75%" 
+                    label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+                  >
                     {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                   </Pie>
                   <Tooltip formatter={(value) => `R$ ${Number(value).toFixed(2)}`} />
