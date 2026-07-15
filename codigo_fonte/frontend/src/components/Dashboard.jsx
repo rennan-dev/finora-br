@@ -133,10 +133,10 @@ function Dashboard({ expenses, invoices, paymentMethods, totalBalance, onUpdateB
           <h2 className="mb-4 font-semibold">Evolução de Gastos</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={evolutionData} margin={{ top: 8, right: 10, left: -10, bottom: 0 }}>
+              <LineChart data={evolutionData} margin={{ top: 8, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => `R$ ${value}`} />
+                <YAxis width={80} tickFormatter={(value) => `R$ ${value}`} />
                 <Tooltip formatter={(value) => `R$ ${Number(value).toFixed(2)}`} />
                 <Legend />
                 <Line type="monotone" dataKey="Crédito" stroke="#10b981" strokeWidth={2} />
