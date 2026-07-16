@@ -30,11 +30,9 @@ const colors = {
 
 function ExpenseList({ expenses, onEdit, onDelete }) {
   const [type, setType] = useState("all");
-  const visibleExpenses = expenses.filter((expense) => type === "all" || expense.type === type);
-
-  if (visibleExpenses.length === 0) {
-    return <div className="rounded-lg border border-dashed py-8 text-center text-muted-foreground">Nenhuma transação encontrada.</div>;
-  }
+  const visibleExpenses = expenses.filter(
+    (expense) => type === "all" || expense.type === type
+  );
 
   return (
     <div className="space-y-3">
@@ -44,57 +42,85 @@ function ExpenseList({ expenses, onEdit, onDelete }) {
         className="rounded-md border bg-background px-3 py-2 text-sm"
       >
         <option value="all">Todos os tipos</option>
-        {Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        {Object.entries(labels).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
       </select>
 
-      {visibleExpenses.map((expense) => {
-        const isPaidCredit = expense.type === "credit" && expense.invoice?.status === "paid";
-        const editable = expense.type !== "invoice_payment" && !isPaidCredit;
-        const transactionDate = new Date(`${expense.transaction_date}T00:00:00`);
+      {visibleExpenses.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-8 text-center text-muted-foreground">
+          Nenhuma transação encontrada.
+        </div>
+      ) : (
+        visibleExpenses.map((expense) => {
+          const isPaidCredit =
+            expense.type === "credit" && expense.invoice?.status === "paid";
+          const editable = expense.type !== "invoice_payment" && !isPaidCredit;
+          const transactionDate = new Date(`${expense.transaction_date}T00:00:00`);
 
-        return (
-          <div key={expense.id} className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium">{expense.description}</h3>
-                <span className={`rounded-full px-2 py-1 text-xs font-medium ${colors[expense.type]}`}>
-                  {labels[expense.type]}
-                </span>
+          return (
+            <div
+              key={expense.id}
+              className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:justify-between"
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium">{expense.description}</h3>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-medium ${
+                      colors[expense.type]
+                    }`}
+                  >
+                    {labels[expense.type]}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {format(transactionDate, "dd 'de' MMMM 'de' yyyy", {
+                    locale: ptBR,
+                  })}
+                  {expense.type === "credit" && expense.invoice && (
+                    <>
+                      {" · "}Fatura{" "}
+                      {String(expense.invoice.reference_month).padStart(2, "0")}/
+                      {expense.invoice.reference_year}
+                      {expense.invoice.cycle > 1 &&
+                        ` · Ciclo ${expense.invoice.cycle}`}
+                    </>
+                  )}
+                  {" · "}
+                  {expense.payment_method?.name}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {format(transactionDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                {expense.type === "credit" && expense.invoice && (
-                  <>
-                    {" · "}Fatura {String(expense.invoice.reference_month).padStart(2, "0")}/{expense.invoice.reference_year}
-                    {expense.invoice.cycle > 1 && ` · Ciclo ${expense.invoice.cycle}`}
-                  </>
-                )}
-                {" · "}
-                {expense.payment_method?.name}
-              </p>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <strong>R$ {Number(expense.amount).toFixed(2)}</strong>
-              {editable && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEdit?.(expense)}>
-                      <Pencil className="mr-2 h-4 w-4" /> Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={() => onDelete?.(expense)}>
-                      <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              <div className="flex items-center gap-3">
+                <strong>R$ {Number(expense.amount).toFixed(2)}</strong>
+                {editable && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onEdit?.(expense)}>
+                        <Pencil className="mr-2 h-4 w-4" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => onDelete?.(expense)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 }

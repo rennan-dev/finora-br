@@ -19,6 +19,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::delete('/me', [AuthController::class, 'destroy']);
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+    Route::get('/dashboard/evolution', [DashboardController::class, 'evolution']);
     Route::apiResource('payment-methods', PaymentMethodController::class);
     Route::apiResource('expenses', ExpenseController::class);
     Route::get('/invoices', [InvoiceController::class, 'index']);
