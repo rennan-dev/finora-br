@@ -68,18 +68,18 @@ function Dashboard({
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="mb-4 font-semibold">Distribuição de Gastos</h2>
+          <h2 className="mb-4 font-semibold text-center md:text-left">Distribuição de Gastos</h2>
           <div className="h-72">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20}}>
                   <Pie 
                     data={chartData} 
                     dataKey="value" 
                     nameKey="name" 
                     cx="50%" 
                     cy="45%" 
-                    outerRadius="75%" 
+                    outerRadius="70%" 
                     label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
                   >
                     {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
@@ -97,7 +97,7 @@ function Dashboard({
         </div>
 
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="mb-4 font-semibold">Evolução de Gastos</h2>
+          <h2 className="mb-4 font-semibold text-center md:text-left">Evolução de Gastos</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={evolution} margin={{ top: 8, right: 10, left: 10, bottom: 0 }}>
@@ -118,7 +118,7 @@ function Dashboard({
       <section className="rounded-xl border bg-card p-5">
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="font-semibold">Movimentações</h2>
+            <h2 className="font-semibold text-center md:text-left">Movimentações</h2>
           </div>
           <MonthSelector selectedMonth={selectedMonth} onMonthChange={onMonthChange} />
         </div>

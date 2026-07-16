@@ -36,7 +36,6 @@ function ExpenseList({ expenses, onEdit, onDelete }) {
 
   return (
     <div className="space-y-3">
-      {/* O filtro agora fica fixo no topo e sempre será renderizado */}
       <select
         value={type}
         onChange={(event) => setType(event.target.value)}
@@ -50,7 +49,6 @@ function ExpenseList({ expenses, onEdit, onDelete }) {
         ))}
       </select>
 
-      {/* Renderização condicional: Mostra a mensagem OU a lista de transações */}
       {visibleExpenses.length === 0 ? (
         <div className="rounded-lg border border-dashed py-8 text-center text-muted-foreground">
           Nenhuma transação encontrada.
