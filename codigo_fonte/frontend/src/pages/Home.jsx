@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Plus, ArrowRightLeft, Banknote, Barcode, CreditCard, FileText, TrendingUp, Wallet } from "lucide-react";
+import { startOfMonth, endOfMonth, format } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,175 +18,121 @@ import AddTransferDialog from "@/components/AddTransferDialog";
 import EditExpenseDialog from "@/components/EditExpenseDialog";
 import FloatingAddButton from "@/components/FloatingAddButton";
 import PayInvoiceDialog from "@/components/PayInvoiceDialog";
-import { api, getPaymentMethods, setCachedPaymentMethods } from "@/lib/api";
+import { api } from "@/lib/api";
 
 function Home() {
   const { toast } = useToast();
-  const [expenses, setExpenses] = useState([]);
-  const [paymentMethods, setPaymentMethods] = useState([]);
-  const [invoices, setInvoices] = useState([]);
+  const queryClient = useQueryClient();
   const [dialog, setDialog] = useState(null);
   const [expenseToEdit, setExpenseToEdit] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  
+  const monthStr = format(selectedMonth, 'yyyy-MM');
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      const response = await api("/dashboard");
-      setExpenses(response.data.expenses);
-      setPaymentMethods(response.data.payment_methods);
-      setInvoices(response.data.invoices);
-      setCachedPaymentMethods(response.data.payment_methods);
-    } catch (error) {
-      toast({
-        title: "Erro ao carregar dados",
-        description: error.message,
-        variant: "destructive",
-      });
+  // 1. Dados Globais (Cartões, Faturas, Saldo)
+  const { data: dashboard } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: () => api("/dashboard").then(res => res.data),
+    initialData: { balance: 0, payment_methods: [], invoices: [] }
+  });
+
+  // 2. Resumo do Mês (Pizza e Totais)
+  const { data: summary } = useQuery({
+    queryKey: ["summary", monthStr],
+    queryFn: () => api(`/dashboard/summary?month=${monthStr}`).then(res => res.data),
+    initialData: { credit: 0, debit: 0, deposit: 0 }
+  });
+
+  // 3. Gráfico de Evolução (Últimos 6 meses)
+  const { data: evolution } = useQuery({
+    queryKey: ["evolution", monthStr],
+    queryFn: () => api(`/dashboard/evolution?month=${monthStr}`).then(res => res.data),
+    initialData: []
+  });
+
+  // 4. Lista de Movimentações do Mês
+  const { data: expenses = [] } = useQuery({
+    queryKey: ["expenses", monthStr],
+    queryFn: () => {
+      const start = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
+      const end = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
+      return api(`/expenses?from=${start}&to=${end}&per_page=1000`).then(res => res.data);
     }
-  }, [toast]);
+  });
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  const updatePaymentMethods = (updatedMethods) => {
-    setPaymentMethods(updatedMethods);
-    setCachedPaymentMethods(updatedMethods);
-  };
-
-  const mergeExpenseMethods = (expense) => {
-    const relatedMethods = [expense.payment_method, expense.destination_payment_method].filter(Boolean);
-    if (!relatedMethods.length) return;
-
-    updatePaymentMethods(paymentMethods.map((method) =>
-      relatedMethods.find((related) => related.id === method.id) || method
-    ));
-  };
-
-  const mergeInvoice = (invoice) => {
-    if (!invoice) return;
-    setInvoices((current) => {
-      const existing = current.some((item) => item.id === invoice.id);
-      return existing
-        ? current.map((item) => (item.id === invoice.id ? invoice : item))
-        : [invoice, ...current];
-    });
+  const refreshData = () => {
+    queryClient.invalidateQueries(["dashboard"]);
+    queryClient.invalidateQueries(["summary"]);
+    queryClient.invalidateQueries(["evolution"]);
+    queryClient.invalidateQueries(["expenses"]);
   };
 
   const handleCreateTransaction = async (payload) => {
     try {
-      const response = await api("/expenses", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      setExpenses((current) => [response.data, ...current].slice(0, 150));
-      mergeExpenseMethods(response.data);
-      mergeInvoice(response.data.invoice);
-      toast({ title: "Transação registrada com sucesso." });
+      await api("/expenses", { method: "POST", body: JSON.stringify(payload) });
+      refreshData();
+      setDialog(null);
+      toast({ title: "Transação registada com sucesso." });
     } catch (error) {
-      toast({ title: "Não foi possível registrar a transação", description: error.message, variant: "destructive" });
-    }
-  };
-
-  const handleCreatePaymentMethod = async (payload) => {
-    try {
-      const response = await api("/payment-methods", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      updatePaymentMethods([
-        ...paymentMethods.map((method) => response.data.is_favorite ? { ...method, is_favorite: false } : method),
-        response.data,
-      ]);
-      toast({ title: "Método de pagamento criado com sucesso." });
-    } catch (error) {
-      toast({ title: "Não foi possível criar o método", description: error.message, variant: "destructive" });
-    }
-  };
-
-  const handleUpdateBalance = async (paymentMethodId, balance) => {
-    try {
-      const response = await api(`/payment-methods/${paymentMethodId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ balance }),
-      });
-      updatePaymentMethods(paymentMethods.map((method) => method.id === response.data.id ? response.data : method));
-      toast({ title: "Saldo atualizado com sucesso." });
-    } catch (error) {
-      toast({ title: "Não foi possível atualizar o saldo", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao registar", description: error.message, variant: "destructive" });
     }
   };
 
   const handleSaveExpense = async (expense) => {
     try {
-      const response = await api(`/expenses/${expense.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(expense),
-      });
+      await api(`/expenses/${expense.id}`, { method: "PATCH", body: JSON.stringify(expense) });
+      refreshData();
       setDialog(null);
-      setExpenses((current) => current.map((item) => item.id === response.data.id ? response.data : item));
-      updatePaymentMethods(await getPaymentMethods({ force: true }));
-      mergeInvoice(response.data.invoice);
-      if (expenseToEdit?.invoice_id && expenseToEdit.invoice_id !== response.data.invoice_id) {
-        setInvoices((current) => current.map((invoice) => invoice.id === expenseToEdit.invoice_id
-          ? { ...invoice, total_amount: Math.max(0, Number(invoice.total_amount) - Number(expenseToEdit.amount)) }
-          : invoice));
-      }
       toast({ title: "Transação atualizada com sucesso." });
     } catch (error) {
-      toast({ title: "Não foi possível atualizar a transação", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
     }
   };
 
   const handleDeleteExpense = async (expense) => {
     if (!window.confirm(`Excluir "${expense.description}"?`)) return;
-
     try {
       await api(`/expenses/${expense.id}`, { method: "DELETE" });
-      setExpenses((current) => current.filter((item) => item.id !== expense.id));
-      updatePaymentMethods(paymentMethods.map((method) => {
-        const amount = Number(expense.amount);
-        if (expense.type === "deposit" && method.id === expense.payment_method_id) {
-          return { ...method, balance: Number(method.balance) - amount };
-        }
-        if (["debit", "boleto", "invoice_payment"].includes(expense.type) && method.id === expense.payment_method_id) {
-          return { ...method, balance: Number(method.balance) + amount };
-        }
-        if (expense.type === "transfer") {
-          if (method.id === expense.payment_method_id) return { ...method, balance: Number(method.balance) + amount };
-          if (method.id === expense.destination_payment_method_id) return { ...method, balance: Number(method.balance) - amount };
-        }
-        return method;
-      }));
-      if (expense.invoice_id) {
-        setInvoices((current) => current.map((invoice) => invoice.id === expense.invoice_id
-          ? { ...invoice, total_amount: Math.max(0, Number(invoice.total_amount) - Number(expense.amount)) }
-          : invoice));
-      }
-      toast({ title: "Transação excluída com sucesso." });
+      refreshData();
+      toast({ title: "Transação excluída." });
     } catch (error) {
-      toast({ title: "Não foi possível excluir a transação", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleCreatePaymentMethod = async (payload) => {
+    try {
+      await api("/payment-methods", { method: "POST", body: JSON.stringify(payload) });
+      refreshData();
+      setDialog(null);
+      toast({ title: "Método criado com sucesso." });
+    } catch (error) {
+      toast({ title: "Erro ao criar método", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleUpdateBalance = async (paymentMethodId, balance) => {
+    try {
+      await api(`/payment-methods/${paymentMethodId}`, { method: "PATCH", body: JSON.stringify({ balance }) });
+      refreshData();
+      toast({ title: "Saldo atualizado com sucesso." });
+    } catch (error) {
+      toast({ title: "Erro ao atualizar saldo", description: error.message, variant: "destructive" });
     }
   };
 
   const handlePayInvoice = async (invoiceId, payload) => {
     try {
-      const response = await api(`/invoices/${invoiceId}/pay`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      mergeInvoice(response.data);
-      setExpenses((current) => [response.payment_expense, ...current].slice(0, 150));
-      mergeExpenseMethods(response.payment_expense);
+      await api(`/invoices/${invoiceId}/pay`, { method: "POST", body: JSON.stringify(payload) });
+      refreshData();
+      setDialog(null);
       toast({ title: "Fatura paga com sucesso." });
       return true;
     } catch (error) {
-      toast({ title: "Não foi possível pagar a fatura", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao pagar fatura", description: error.message, variant: "destructive" });
       return false;
     }
   };
-
-  const totalBalance = paymentMethods
-    .reduce((total, method) => total + Number(method.balance), 0);
 
   const openEdit = (expense) => {
     setExpenseToEdit(expense);
@@ -196,11 +144,10 @@ function Home() {
       <div className="min-h-screen bg-gradient-to-br from-primary/20 to-muted px-4 py-8">
         <div className="mx-auto w-full max-w-6xl space-y-6">
           <div className="flex justify-end">
-            <DropdownMenu>
+             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="hidden gap-2 sm:flex">
-                  <Plus className="h-5 w-5" />
-                  Nova Transação
+                  <Plus className="h-5 w-5" /> Nova Transação
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -232,12 +179,14 @@ function Home() {
           <div className="rounded-xl border bg-card/90 p-6 shadow-md">
             <Dashboard
               expenses={expenses}
-              invoices={invoices}
-              paymentMethods={paymentMethods}
-              totalBalance={totalBalance}
+              dashboard={dashboard}
+              summary={summary}
+              evolution={evolution}
               onUpdateBalance={handleUpdateBalance}
               onEditExpense={openEdit}
               onDeleteExpense={handleDeleteExpense}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
             />
           </div>
         </div>
@@ -252,65 +201,14 @@ function Home() {
           onAddPaymentMethod={() => setDialog("method")}
         />
 
-        <AddExpenseDialog
-          open={dialog === "deposit"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          onAddExpense={handleCreateTransaction}
-          paymentMethods={paymentMethods}
-          paymentType="deposit"
-          title="Registrar Entrada / Depósito"
-          submitLabel="Fazer Depósito"
-        />
-        <AddExpenseDialog
-          open={dialog === "debit"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          onAddExpense={handleCreateTransaction}
-          paymentMethods={paymentMethods}
-          paymentType="debit"
-          title="Adicionar Compra no Débito"
-        />
-        <AddExpenseDialog
-          open={dialog === "credit"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          onAddExpense={handleCreateTransaction}
-          paymentMethods={paymentMethods}
-          paymentType="credit"
-          title="Adicionar Compra no Crédito"
-        />
-        <AddExpenseDialog
-          open={dialog === "boleto"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          onAddExpense={handleCreateTransaction}
-          paymentMethods={paymentMethods}
-          paymentType="boleto"
-          title="Pagar Boleto"
-          submitLabel="Pagar Boleto"
-        />
-        <AddTransferDialog
-          open={dialog === "transfer"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          onAddTransfer={handleCreateTransaction}
-          paymentMethods={paymentMethods}
-        />
-        <PayInvoiceDialog
-          open={dialog === "invoice"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          paymentMethods={paymentMethods}
-          invoices={invoices}
-          onConfirmPayment={handlePayInvoice}
-        />
-        <AddPaymentMethodDialog
-          open={dialog === "method"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          onAddPaymentMethod={handleCreatePaymentMethod}
-        />
-        <EditExpenseDialog
-          open={dialog === "edit"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          onSave={handleSaveExpense}
-          paymentMethods={paymentMethods}
-          expense={expenseToEdit}
-        />
+        <AddExpenseDialog open={dialog === "deposit"} onOpenChange={(open) => !open && setDialog(null)} onAddExpense={handleCreateTransaction} paymentMethods={dashboard.payment_methods} paymentType="deposit" title="Registrar Entrada / Depósito" submitLabel="Fazer Depósito" />
+        <AddExpenseDialog open={dialog === "debit"} onOpenChange={(open) => !open && setDialog(null)} onAddExpense={handleCreateTransaction} paymentMethods={dashboard.payment_methods} paymentType="debit" title="Adicionar Compra no Débito" />
+        <AddExpenseDialog open={dialog === "credit"} onOpenChange={(open) => !open && setDialog(null)} onAddExpense={handleCreateTransaction} paymentMethods={dashboard.payment_methods} paymentType="credit" title="Adicionar Compra no Crédito" />
+        <AddExpenseDialog open={dialog === "boleto"} onOpenChange={(open) => !open && setDialog(null)} onAddExpense={handleCreateTransaction} paymentMethods={dashboard.payment_methods} paymentType="boleto" title="Pagar Boleto" submitLabel="Pagar Boleto" />
+        <AddTransferDialog open={dialog === "transfer"} onOpenChange={(open) => !open && setDialog(null)} onAddTransfer={handleCreateTransaction} paymentMethods={dashboard.payment_methods} />
+        <PayInvoiceDialog open={dialog === "invoice"} onOpenChange={(open) => !open && setDialog(null)} paymentMethods={dashboard.payment_methods} invoices={dashboard.invoices} onConfirmPayment={handlePayInvoice} />
+        <AddPaymentMethodDialog open={dialog === "method"} onOpenChange={(open) => !open && setDialog(null)} onAddPaymentMethod={handleCreatePaymentMethod} />
+        <EditExpenseDialog open={dialog === "edit"} onOpenChange={(open) => !open && setDialog(null)} onSave={handleSaveExpense} paymentMethods={dashboard.payment_methods} expense={expenseToEdit} />
       </div>
     </Layout>
   );

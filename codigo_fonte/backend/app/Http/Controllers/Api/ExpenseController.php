@@ -21,7 +21,7 @@ class ExpenseController extends Controller
             'type' => ['nullable', 'string'],
             'payment_method_id' => ['nullable', 'integer'],
             'invoice_id' => ['nullable', 'integer'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ]);
 
         $expenses = $request->user()
