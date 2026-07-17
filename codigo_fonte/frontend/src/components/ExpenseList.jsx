@@ -41,12 +41,15 @@ function ExpenseList({ expenses, onEdit, onDelete }) {
         onChange={(event) => setType(event.target.value)}
         className="rounded-md border bg-background px-3 py-2 text-sm"
       >
-        <option value="all">Todos os tipos</option>
-        {Object.entries(labels).map(([value, label]) => (
+        <option value="all">Todos os tipos ({expenses.length})</option>
+        {Object.entries(labels).map(([value, label]) => {
+          const count = expenses.filter((e) => e.type === value).length;
+          return (
           <option key={value} value={value}>
-            {label}
+            {label} ({count})
           </option>
-        ))}
+          );
+        })}
       </select>
 
       {visibleExpenses.length === 0 ? (
