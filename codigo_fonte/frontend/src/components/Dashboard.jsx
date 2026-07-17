@@ -13,6 +13,7 @@ function Dashboard({
   onUpdateBalance, onEditExpense, onDeleteExpense, selectedMonth, onMonthChange 
 }) {
   const [methodToEdit, setMethodToEdit] = useState(null);
+  const [evolutionPeriod, setEvolutionPeriod] = useState("monthly");
 
   const nextInvoiceReference = useMemo(
     () => new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1),
@@ -37,6 +38,22 @@ function Dashboard({
     { name: "Débito", value: summary.debit, color: "#3b82f6" },
     { name: "Depósito", value: summary.deposit, color: "#8b5cf6" },
   ].filter((entry) => entry.value > 0);
+
+  const currentEvolutionData = useMemo(() => {
+    if(evolution?.[evolutionPeriod]) {
+        return evolution[evolutionPeriod];
+    }
+    
+    if(evolution?.data?.[evolutionPeriod]) {
+        return evolution.data[evolutionPeriod];
+    }
+    
+    if(Array.isArray(evolution)) {
+        return evolutionPeriod === "monthly" ? evolution : [];
+    }
+    
+    return [];
+  }, [evolution, evolutionPeriod]);
 
   return (
     <div className="space-y-6">
@@ -97,18 +114,45 @@ function Dashboard({
         </div>
 
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="mb-4 font-semibold text-center md:text-left">Evolução de Gastos</h2>
+          <div className="mb-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+            <h2 className="font-semibold text-center md:text-left">Evolução de Gastos</h2>
+            <div className="flex rounded-lg bg-muted/50 p-1 text-sm">
+              <button
+                type="button"
+                onClick={() => setEvolutionPeriod("monthly")}
+                className={`rounded-md px-3 py-1 transition-all ${
+                  evolutionPeriod === "monthly" 
+                    ? "bg-background font-medium shadow-sm" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                6 Meses
+              </button>
+              <button
+                type="button"
+                onClick={() => setEvolutionPeriod("daily")}
+                className={`rounded-md px-3 py-1 transition-all ${
+                  evolutionPeriod === "daily" 
+                    ? "bg-background font-medium shadow-sm" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                Mês Atual
+              </button>
+            </div>
+          </div>
+
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={evolution} margin={{ top: 8, right: 10, left: 10, bottom: 0 }}>
+              <LineChart data={currentEvolutionData} margin={{ top: 8, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
+                <XAxis dataKey="name" interval={evolutionPeriod === "monthly" ? 0 : "preserveStartEnd"} />
                 <YAxis width={80} tickFormatter={(value) => `R$ ${value}`} />
                 <Tooltip formatter={(value) => `R$ ${Number(value).toFixed(2)}`} />
                 <Legend />
-                <Line type="monotone" dataKey="Crédito" stroke="#10b981" strokeWidth={2} />
-                <Line type="monotone" dataKey="Débito" stroke="#3b82f6" strokeWidth={2} />
-                <Line type="monotone" dataKey="Depósito" stroke="#8b5cf6" strokeWidth={2} />
+                <Line type="monotone" dataKey="Crédito" stroke="#10b981" strokeWidth={2} dot={evolutionPeriod === "monthly"} />
+                <Line type="monotone" dataKey="Débito" stroke="#3b82f6" strokeWidth={2} dot={evolutionPeriod === "monthly"} />
+                <Line type="monotone" dataKey="Depósito" stroke="#8b5cf6" strokeWidth={2} dot={evolutionPeriod === "monthly"} />
               </LineChart>
             </ResponsiveContainer>
           </div>

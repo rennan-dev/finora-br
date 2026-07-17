@@ -10,8 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class DashboardController extends Controller
-{
+class DashboardController extends Controller {
     //retorna apenas dados globais que não mudam com o mês selecionado
     public function index(Request $request): JsonResponse {
         $user = $request->user();
@@ -69,11 +68,15 @@ class DashboardController extends Controller
             'month' => ['required', 'date_format:Y-m'],
         ]);
 
+        $baseStart = Carbon::createFromFormat('Y-m', $request->month)->startOfMonth();
         $end = Carbon::createFromFormat('Y-m', $request->month)->endOfMonth();
-        $start = $end->copy()->subMonths(5)->startOfMonth();
+        $startMonthly = $baseStart->copy()->subMonths(5);
+        $startDaily = $baseStart->copy();
 
-        $expenses = $request->user()->expenses()
-            ->whereBetween('transaction_date', [$start, $end])
+        Carbon::setLocale('pt_BR');
+
+        $expensesMonthly = $request->user()->expenses()
+            ->whereBetween('transaction_date', [$startMonthly, $end])
             ->select(
                 DB::raw('DATE_FORMAT(transaction_date, "%Y-%m") as month_group'),
                 'type',
@@ -82,14 +85,12 @@ class DashboardController extends Controller
             ->groupBy('month_group', 'type')
             ->get();
 
-        Carbon::setLocale('pt_BR');
-        $evolution = [];
-
+        $evolutionMonthly = [];
         for ($i = 5; $i >= 0; $i--) {
-            $date = $end->copy()->subMonths($i);
+            $date = $baseStart->copy()->subMonths($i);
             $monthKey = $date->format('Y-m');
             
-            $evolution[$monthKey] = [
+            $evolutionMonthly[$monthKey] = [
                 'name' => str_replace('.', '', $date->shortMonthName),
                 'Crédito' => 0,
                 'Débito' => 0,
@@ -97,23 +98,64 @@ class DashboardController extends Controller
             ];
         }
 
-        foreach ($expenses as $expense) {
+        foreach ($expensesMonthly as $expense) {
             $key = $expense->month_group;
-            if (!isset($evolution[$key])) continue;
+            if (!isset($evolutionMonthly[$key])) continue;
 
             $amount = (float) $expense->total;
-            
             if ($expense->type === 'credit') {
-                $evolution[$key]['Crédito'] += $amount;
+                $evolutionMonthly[$key]['Crédito'] += $amount;
             } elseif (in_array($expense->type, ['debit', 'boleto'])) {
-                $evolution[$key]['Débito'] += $amount;
+                $evolutionMonthly[$key]['Débito'] += $amount;
             } elseif ($expense->type === 'deposit') {
-                $evolution[$key]['Depósito'] += $amount;
+                $evolutionMonthly[$key]['Depósito'] += $amount;
+            }
+        }
+
+        $expensesDaily = $request->user()->expenses()
+            ->whereBetween('transaction_date', [$startDaily, $end])
+            ->select(
+                DB::raw('DATE_FORMAT(transaction_date, "%Y-%m-%d") as day_group'),
+                'type',
+                DB::raw('SUM(amount) as total')
+            )
+            ->groupBy('day_group', 'type')
+            ->get();
+
+        $evolutionDaily = [];
+        $daysInMonth = $end->daysInMonth;
+
+        for ($i = 1; $i <= $daysInMonth; $i++) {
+            $date = $startDaily->copy()->addDays($i - 1);
+            $dayKey = $date->format('Y-m-d');
+            
+            $evolutionDaily[$dayKey] = [
+                'name' => $date->format('d/m'),
+                'Crédito' => 0,
+                'Débito' => 0,
+                'Depósito' => 0,
+            ];
+        }
+
+        foreach ($expensesDaily as $expense) {
+            $key = $expense->day_group;
+            if (!isset($evolutionDaily[$key])) continue;
+
+            $amount = (float) $expense->total;
+            if ($expense->type === 'credit') {
+                $evolutionDaily[$key]['Crédito'] += $amount;
+            } elseif (in_array($expense->type, ['debit', 'boleto'])) {
+                $evolutionDaily[$key]['Débito'] += $amount;
+            } elseif ($expense->type === 'deposit') {
+                $evolutionDaily[$key]['Depósito'] += $amount;
             }
         }
 
         return response()->json([
-            'data' => array_values($evolution)
+            'data' => [
+                'monthly' => array_values($evolutionMonthly),
+                'daily' => array_values($evolutionDaily)
+            ]
         ]);
     }
 }
