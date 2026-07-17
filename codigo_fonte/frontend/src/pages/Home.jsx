@@ -47,7 +47,7 @@ function Home() {
   const { data: evolution } = useQuery({
     queryKey: ["evolution", monthStr],
     queryFn: () => api(`/dashboard/evolution?month=${monthStr}`).then(res => res.data),
-    initialData: []
+    initialData: { monthly: [], daily: [] }
   });
 
   // 4. Lista de Movimentações do Mês
