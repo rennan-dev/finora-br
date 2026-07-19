@@ -206,14 +206,17 @@ function Dashboard({
                       return; 
                   }
                   
-                  const response = await fetch(`http://localhost:8000/api/expenses/export?month=${monthStr}`, {
-                    method: 'GET',
-                    headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Accept': 'application/pdf',
-                      'X-Requested-With': 'XMLHttpRequest'
+                  const response = await fetch(
+                    `${import.meta.env.VITE_API_URL}/expenses/export?month=${monthStr}`,
+                    {
+                      method: 'GET',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/pdf',
+                        'X-Requested-With': 'XMLHttpRequest'
+                      }
                     }
-                  });
+                  );
 
                   if (!response.ok) throw new Error(`Erro ${response.status}`);
 
