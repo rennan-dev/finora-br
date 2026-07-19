@@ -10,7 +10,7 @@ use App\Models\Expense;
 use App\Services\FinanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Dompdf\Dompdf;
 use Carbon\Carbon;
 
 class ExpenseController extends Controller {
@@ -87,6 +87,7 @@ class ExpenseController extends Controller {
 
     public function exportPdf(Request $request) {
         $month = $request->query('month');
+
         $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
         $end = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
 
@@ -97,23 +98,26 @@ class ExpenseController extends Controller {
             ->get();
 
         $linhas = '';
+
         $totalDeposito = 0;
         $totalCredito = 0;
         $totalDebito = 0;
         $totalGeral = 0;
 
-        foreach($expenses as $expense) {
+        foreach ($expenses as $expense) {
+
             $valorFormatado = number_format($expense->amount, 2, ',', '.');
             $tipo = strtoupper($expense->type);
             $dataStr = Carbon::parse($expense->transaction_date)->format('d/m/Y');
-            
-            if($expense->type === 'credit') {
+
+            if ($expense->type === 'credit') {
                 $totalCredito += $expense->amount;
-            }elseif($expense->type === 'deposit') {
+            } elseif ($expense->type === 'deposit') {
                 $totalDeposito += $expense->amount;
-            }elseif(in_array($expense->type, ['debit', 'boleto'])) {
+            } elseif (in_array($expense->type, ['debit', 'boleto'])) {
                 $totalDebito += $expense->amount;
             }
+
             $totalGeral += $expense->amount;
 
             $linhas .= "
@@ -121,65 +125,167 @@ class ExpenseController extends Controller {
                 <td>{$expense->description}</td>
                 <td>{$dataStr}</td>
                 <td>{$tipo}</td>
-                <td style='text-align: right'>R$ {$valorFormatado}</td>
+                <td style='text-align:right'>R$ {$valorFormatado}</td>
             </tr>";
         }
 
         $totalCreditoStr = number_format($totalCredito, 2, ',', '.');
         $totalDebitoStr = number_format($totalDebito, 2, ',', '.');
-        $totalGeralStr = number_format($totalGeral, 2, ',', '.');
         $totalDepositStr = number_format($totalDeposito, 2, ',', '.');
+        $totalGeralStr = number_format($totalGeral, 2, ',', '.');
 
         $html = "
         <!DOCTYPE html>
-        <html>
+        <html lang='pt-BR'>
         <head>
-            <meta charset='utf-8'>
+            <meta charset='UTF-8'>
             <title>Relatório de Despesas</title>
+
             <style>
-                *, *::before, *::after { box-sizing: border-box; }
-                @page { size: A4; margin: 15mm 15mm; background-color: #f8fafc; }
-                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #334155; margin: 0; padding: 0; }
-                .header { text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
-                .header h1 { color: #0f172a; font-size: 22pt; margin: 0 0 5px 0; }
-                .header h2 { color: #64748b; font-size: 14pt; font-weight: normal; margin: 0; }
-                table { width: 100%; border-collapse: collapse; font-size: 10pt; background: #ffffff; border-radius: 8px; overflow: hidden; margin-bottom: 20px;}
-                th { background-color: #f1f5f9; color: #475569; text-align: left; padding: 12px; border-bottom: 2px solid #cbd5e1; text-transform: uppercase; font-size: 9pt; }
-                td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; }
-                tr:last-child td { border-bottom: none; }
-                .totals-box { margin-top: 20px; padding: 15px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; page-break-inside: avoid; text-align: right; }
-                .totals-row { margin-bottom: 8px; color: #475569; font-size: 11pt; }
-                .totals-row strong { font-size: 12pt; }
-                .totals-general { font-size: 14pt; font-weight: bold; color: #0f172a; margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+                *{
+                    box-sizing:border-box;
+                }
+
+                @page{
+                    margin:15mm;
+                }
+
+                body{
+                    font-family:DejaVu Sans,sans-serif;
+                    color:#334155;
+                    font-size:12px;
+                }
+
+                .header{
+                    text-align:center;
+                    margin-bottom:25px;
+                    border-bottom:2px solid #e2e8f0;
+                    padding-bottom:15px;
+                }
+
+                h1{
+                    margin:0;
+                    color:#0f172a;
+                    font-size:22px;
+                }
+
+                h2{
+                    margin-top:8px;
+                    color:#64748b;
+                    font-size:14px;
+                    font-weight:normal;
+                }
+
+                table{
+                    width:100%;
+                    border-collapse:collapse;
+                    margin-top:20px;
+                }
+
+                th{
+                    background:#f1f5f9;
+                    border:1px solid #cbd5e1;
+                    padding:10px;
+                    text-align:left;
+                }
+
+                td{
+                    border:1px solid #e2e8f0;
+                    padding:8px 10px;
+                }
+
+                .right{
+                    text-align:right;
+                }
+
+                .totals{
+                    margin-top:30px;
+                    border:1px solid #cbd5e1;
+                    padding:15px;
+                }
+
+                .totals div{
+                    margin-bottom:8px;
+                }
+
+                .grand-total{
+                    margin-top:15px;
+                    padding-top:12px;
+                    border-top:1px solid #cbd5e1;
+                    font-size:16px;
+                    font-weight:bold;
+                }
             </style>
         </head>
+
         <body>
+
             <div class='header'>
                 <h1>Relatório de Despesas</h1>
-                <!-- Removemos a string 'Mês:' -->
                 <h2>{$month}</h2>
             </div>
+
             <table>
+
                 <thead>
-                    <tr><th>Descrição</th><th>Data</th><th>Tipo</th><th style='text-align: right'>Valor</th></tr>
+                    <tr>
+                        <th>Descrição</th>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th class='right'>Valor</th>
+                    </tr>
                 </thead>
+
                 <tbody>
                     {$linhas}
                 </tbody>
+
             </table>
-            <!-- Nova caixa com os totais -->
-            <div class='totals-box'>
-                <div class='totals-row'>Total no Depósito: <strong style='color: #cea229;'>R$ {$totalDepositStr}</strong></div>
-                <div class='totals-row'>Total no Crédito: <strong style='color: #059669;'>R$ {$totalCreditoStr}</strong></div>
-                <div class='totals-row'>Total no Débito/Boletos: <strong style='color: #2563eb;'>R$ {$totalDebitoStr}</strong></div>
-                <div class='totals-general'>Total de Movimentações: <span style='color: #0f172a;'>R$ {$totalGeralStr}</span></div>
+
+            <div class='totals'>
+
+                <div>
+                    Total no Depósito:
+                    <strong>R$ {$totalDepositStr}</strong>
+                </div>
+
+                <div>
+                    Total no Crédito:
+                    <strong>R$ {$totalCreditoStr}</strong>
+                </div>
+
+                <div>
+                    Total no Débito/Boletos:
+                    <strong>R$ {$totalDebitoStr}</strong>
+                </div>
+
+                <div class='grand-total'>
+                    Total de Movimentações:
+                    R$ {$totalGeralStr}
+                </div>
+
             </div>
+
         </body>
         </html>";
 
-        $pdf = Pdf::loadHTML($html);
+        $dompdf = new Dompdf();
+
+        $dompdf->loadHtml($html);
+
+        $dompdf->setPaper('A4', 'portrait');
+
+        $dompdf->render();
+
         $filename = 'despesa_' . str_replace('-', '_', $month) . '.pdf';
-        
-        return $pdf->download($filename);
+
+        return response(
+            $dompdf->output(),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            ]
+        );
     }
 }
