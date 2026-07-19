@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
-import { CreditCard, Wallet } from "lucide-react";
+import { Download, CreditCard, Wallet, Loader2 } from "lucide-react";
 import {
   CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import ExpenseList from "@/components/ExpenseList";
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import ExpenseList, { expenseLabels } from "@/components/ExpenseList";
 import MonthSelector from "@/components/MonthSelector";
 import UpdateBalanceDialog from "@/components/UpdateBalanceDialog";
 
@@ -14,6 +16,8 @@ function Dashboard({
 }) {
   const [methodToEdit, setMethodToEdit] = useState(null);
   const [evolutionPeriod, setEvolutionPeriod] = useState("monthly");
+  const [expenseFilter, setExpenseFilter] = useState("all");
+  const [isExporting, setIsExporting] = useState(false);
 
   const nextInvoiceReference = useMemo(
     () => new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1),
@@ -160,13 +164,101 @@ function Dashboard({
       </section>
 
       <section className="rounded-xl border bg-card p-5">
-        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="font-semibold text-center md:text-left">Movimentações</h2>
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-xl">Movimentações</h2>
+            <MonthSelector
+              selectedMonth={selectedMonth}
+              onMonthChange={onMonthChange}
+            />
           </div>
-          <MonthSelector selectedMonth={selectedMonth} onMonthChange={onMonthChange} />
+
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <select
+                value={expenseFilter}
+                onChange={(event) => setExpenseFilter(event.target.value)}
+                className="w-fit rounded-md border bg-background px-3 py-2 text-sm pr-8"
+              >
+                <option value="all">Todos os tipos ({expenses.length})</option>
+                {Object.entries(expenseLabels).map(([value, label]) => {
+                  const count = expenses.filter((e) => e.type === value).length;
+                  return (
+                    <option key={value} value={value}>
+                      {label} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              disabled={isExporting}
+              onClick={async () => {
+                try {
+                  setIsExporting(true);
+                  const monthStr = format(selectedMonth, 'yyyy-MM');
+                  const token = sessionStorage.getItem('financas.auth_token'); 
+                  
+                  if (!token) {
+                      alert("Sua sessão expirou ou o token não foi encontrado.");
+                      return; 
+                  }
+                  
+                  const response = await fetch(`http://localhost:8000/api/expenses/export?month=${monthStr}`, {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Accept': 'application/pdf',
+                      'X-Requested-With': 'XMLHttpRequest'
+                    }
+                  });
+
+                  if (!response.ok) throw new Error(`Erro ${response.status}`);
+
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', `despesa_${monthStr.replace('-', '_')}.pdf`);
+                  document.body.appendChild(link);
+                  link.click();
+                  
+                  link.parentNode.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+
+                } catch (error) {
+                  console.error("Falha ao exportar:", error);
+                  alert(`Falha ao exportar o PDF: ${error.message}`);
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Exportando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" /> Exportar PDF
+                </>
+              )}
+            </Button>
+          </div>
+          
         </div>
-        <ExpenseList expenses={expenses} onEdit={onEditExpense} onDelete={onDeleteExpense} />
+
+        <div className="w-full mt-6">
+          <ExpenseList
+            expenses={expenses}
+            filterType={expenseFilter}
+            onEdit={onEditExpense}
+            onDelete={onDeleteExpense}
+          />
+        </div>
       </section>
 
       <UpdateBalanceDialog
