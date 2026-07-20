@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const labels = {
+export const expenseLabels = {
   credit: "Crédito",
   debit: "Débito",
   deposit: "Depósito",
@@ -28,27 +28,16 @@ const colors = {
   invoice_payment: "bg-slate-100 text-slate-800",
 };
 
-function ExpenseList({ expenses, onEdit, onDelete }) {
-  const [type, setType] = useState("all");
-  const visibleExpenses = expenses.filter(
-    (expense) => type === "all" || expense.type === type
-  );
+function ExpenseList({ expenses, filterType = "all", accountFilter = "all", onEdit, onDelete }) {
+  const visibleExpenses = expenses.filter((expense) => {
+    const matchType = filterType === "all" || expense.type === filterType;
+    const matchAccount = accountFilter === "all" || String(expense.payment_method?.id) === String(accountFilter);
+    
+    return matchType && matchAccount;
+  });
 
   return (
     <div className="space-y-3">
-      <select
-        value={type}
-        onChange={(event) => setType(event.target.value)}
-        className="rounded-md border bg-background px-3 py-2 text-sm"
-      >
-        <option value="all">Todos os tipos</option>
-        {Object.entries(labels).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-
       {visibleExpenses.length === 0 ? (
         <div className="rounded-lg border border-dashed py-8 text-center text-muted-foreground">
           Nenhuma transação encontrada.
@@ -73,7 +62,7 @@ function ExpenseList({ expenses, onEdit, onDelete }) {
                       colors[expense.type]
                     }`}
                   >
-                    {labels[expense.type]}
+                    {expenseLabels[expense.type]}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">

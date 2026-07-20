@@ -22,6 +22,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
     Route::get('/dashboard/evolution', [DashboardController::class, 'evolution']);
     Route::apiResource('payment-methods', PaymentMethodController::class);
+    Route::get('/expenses/export', [ExpenseController::class, 'exportPdf']);
     Route::apiResource('expenses', ExpenseController::class);
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
