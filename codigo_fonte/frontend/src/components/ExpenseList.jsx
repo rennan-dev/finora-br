@@ -28,10 +28,13 @@ const colors = {
   invoice_payment: "bg-slate-100 text-slate-800",
 };
 
-function ExpenseList({ expenses, filterType = "all", onEdit, onDelete }) {
-  const visibleExpenses = expenses.filter(
-    (expense) => filterType === "all" || expense.type === filterType
-  );
+function ExpenseList({ expenses, filterType = "all", accountFilter = "all", onEdit, onDelete }) {
+  const visibleExpenses = expenses.filter((expense) => {
+    const matchType = filterType === "all" || expense.type === filterType;
+    const matchAccount = accountFilter === "all" || String(expense.payment_method?.id) === String(accountFilter);
+    
+    return matchType && matchAccount;
+  });
 
   return (
     <div className="space-y-3">
