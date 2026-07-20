@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-// Adicionado o ícone 'Filter'
 import { Download, CreditCard, Wallet, Loader2, Filter } from "lucide-react";
 import {
   CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
@@ -18,6 +17,7 @@ function Dashboard({
   const [methodToEdit, setMethodToEdit] = useState(null);
   const [evolutionPeriod, setEvolutionPeriod] = useState("monthly");
   const [expenseFilter, setExpenseFilter] = useState("all");
+  const [accountFilter, setAccountFilter] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
 
   const nextInvoiceReference = useMemo(
@@ -215,25 +215,48 @@ function Dashboard({
           <h2 className="text-center font-semibold text-xl">Movimentações</h2>
           
           <div className="flex items-center justify-between">
-            <div className="relative">
-              <Button variant="outline" size="icon" className="w-10 h-10">
-                <Filter className="h-4 w-4" />
-              </Button>
-              <select
-                value={expenseFilter}
-                onChange={(event) => setExpenseFilter(event.target.value)}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              >
-                <option value="all">Todos ({expenses.length})</option>
-                {Object.entries(expenseLabels).map(([value, label]) => {
-                  const count = expenses.filter((e) => e.type === value).length;
-                  return (
-                    <option key={value} value={value}>
-                      {label} ({count})
-                    </option>
-                  );
-                })}
-              </select>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Button variant="outline" size="icon" className="w-10 h-10">
+                  <Filter className="h-4 w-4" />
+                </Button>
+                <select
+                  value={expenseFilter}
+                  onChange={(event) => setExpenseFilter(event.target.value)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                >
+                  <option value="all">Todos os tipos ({expenses.length})</option>
+                  {Object.entries(expenseLabels).map(([value, label]) => {
+                    const count = expenses.filter((e) => e.type === value).length;
+                    return (
+                      <option key={value} value={value}>
+                        {label} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="relative">
+                <Button variant="outline" size="icon" className="w-10 h-10">
+                  <Wallet className="h-4 w-4" />
+                </Button>
+                <select
+                  value={accountFilter}
+                  onChange={(event) => setAccountFilter(event.target.value)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                >
+                  <option value="all">Todas as contas ({expenses.length})</option>
+                  {dashboard.payment_methods.map((method) => {
+                    const count = expenses.filter((e) => String(e.payment_method?.id) === String(method.id)).length;
+                    return (
+                      <option key={method.id} value={method.id}>
+                        {method.name} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
             </div>
 
             <Button 
@@ -266,7 +289,7 @@ function Dashboard({
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <div>
+            <div className="flex gap-2">
               <select
                 value={expenseFilter}
                 onChange={(event) => setExpenseFilter(event.target.value)}
@@ -278,6 +301,22 @@ function Dashboard({
                   return (
                     <option key={value} value={value}>
                       {label} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+
+              <select
+                value={accountFilter}
+                onChange={(event) => setAccountFilter(event.target.value)}
+                className="w-fit rounded-md border bg-background px-3 py-2 text-sm pr-8"
+              >
+                <option value="all">Todas as contas ({expenses.length})</option>
+                {dashboard.payment_methods.map((method) => {
+                  const count = expenses.filter((e) => String(e.payment_method?.id) === String(method.id)).length;
+                  return (
+                    <option key={method.id} value={method.id}>
+                      {method.name} ({count})
                     </option>
                   );
                 })}
@@ -306,6 +345,7 @@ function Dashboard({
           <ExpenseList
             expenses={expenses}
             filterType={expenseFilter}
+            accountFilter={accountFilter}
             onEdit={onEditExpense}
             onDelete={onDeleteExpense}
           />
