@@ -30,10 +30,10 @@ const colors = {
   invoice_payment: "bg-slate-100 text-slate-800",
 };
 
-function ExpenseList({ expenses, filterType = "all", accountFilter = "all", onEdit, onDelete, onMarkAsPaid }) {
+function ExpenseList({ expenses, selectedTypes = [], selectedAccounts = [], onEdit, onDelete, onMarkAsPaid }) {
   const visibleExpenses = expenses.filter((expense) => {
-    const matchType = filterType === "all" || expense.type === filterType;
-    const matchAccount = accountFilter === "all" || String(expense.payment_method?.id) === String(accountFilter);
+    const matchType = selectedTypes.length === 0 || selectedTypes.includes(expense.type);
+    const matchAccount = selectedAccounts.length === 0 || selectedAccounts.includes(String(expense.payment_method?.id));
     
     return matchType && matchAccount;
   });
