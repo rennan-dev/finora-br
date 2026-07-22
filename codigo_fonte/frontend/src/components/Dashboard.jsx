@@ -12,7 +12,7 @@ import UpdateBalanceDialog from "@/components/UpdateBalanceDialog";
 
 function Dashboard({ 
   expenses, dashboard, summary, evolution, 
-  onUpdateBalance, onEditExpense, onDeleteExpense, selectedMonth, onMonthChange 
+  onUpdateBalance, onEditExpense, onDeleteExpense, onMarkAsPaid, selectedMonth, onMonthChange 
 }) {
   const [methodToEdit, setMethodToEdit] = useState(null);
   const [evolutionPeriod, setEvolutionPeriod] = useState("monthly");
@@ -348,6 +348,7 @@ function Dashboard({
             accountFilter={accountFilter}
             onEdit={onEditExpense}
             onDelete={onDeleteExpense}
+            onMarkAsPaid={onMarkAsPaid}
           />
         </div>
       </section>

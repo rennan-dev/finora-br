@@ -15,6 +15,7 @@ class ExpenseResource extends JsonResource
             'amount' => (float) $this->amount,
             'transaction_date' => $this->transaction_date?->toDateString(),
             'type' => $this->type,
+            'is_paid' => $this->is_paid ?? false,
             'payment_method_id' => $this->payment_method_id,
             'destination_payment_method_id' => $this->destination_payment_method_id,
             'invoice_id' => $this->invoice_id,

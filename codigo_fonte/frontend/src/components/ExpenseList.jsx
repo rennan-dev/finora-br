@@ -1,7 +1,7 @@
 import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ export const expenseLabels = {
   deposit: "Depósito",
   transfer: "Transferência",
   boleto: "Boleto",
+  fixed_expense: "Despesa Fixa",
   invoice_payment: "Pagamento de fatura",
 };
 
@@ -25,10 +26,11 @@ const colors = {
   deposit: "bg-purple-100 text-purple-800",
   transfer: "bg-orange-100 text-orange-800",
   boleto: "bg-red-100 text-red-800",
+  fixed_expense: "bg-cyan-100 text-cyan-800",
   invoice_payment: "bg-slate-100 text-slate-800",
 };
 
-function ExpenseList({ expenses, filterType = "all", accountFilter = "all", onEdit, onDelete }) {
+function ExpenseList({ expenses, filterType = "all", accountFilter = "all", onEdit, onDelete, onMarkAsPaid }) {
   const visibleExpenses = expenses.filter((expense) => {
     const matchType = filterType === "all" || expense.type === filterType;
     const matchAccount = accountFilter === "all" || String(expense.payment_method?.id) === String(accountFilter);
@@ -52,11 +54,25 @@ function ExpenseList({ expenses, filterType = "all", accountFilter = "all", onEd
           return (
             <div
               key={expense.id}
-              className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:justify-between"
+              className={`flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:justify-between ${
+                expense.type === "fixed_expense" && expense.is_paid === false
+                  ? "border-yellow-300 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/20"
+                  : ""
+              }`}
             >
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-medium">{expense.description}</h3>
+                  {expense.type === "fixed_expense" && expense.is_paid === false && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                      <Clock className="h-3 w-3" /> Pendente
+                    </span>
+                  )}
+                  {expense.type === "fixed_expense" && expense.is_paid === true && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                      <CheckCircle2 className="h-3 w-3" /> Pago
+                    </span>
+                  )}
                   <span
                     className={`rounded-full px-2 py-1 text-xs font-medium ${
                       colors[expense.type]
@@ -93,6 +109,11 @@ function ExpenseList({ expenses, filterType = "all", accountFilter = "all", onEd
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {expense.type === "fixed_expense" && expense.is_paid === false && (
+                        <DropdownMenuItem onClick={() => onMarkAsPaid?.(expense)}>
+                          <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" /> Marcar como Pago
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => onEdit?.(expense)}>
                         <Pencil className="mr-2 h-4 w-4" /> Editar
                       </DropdownMenuItem>

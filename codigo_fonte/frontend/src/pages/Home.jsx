@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, ArrowRightLeft, Banknote, Barcode, CreditCard, FileText, TrendingUp, Wallet } from "lucide-react";
+import { Plus, ArrowRightLeft, Banknote, Barcode, CreditCard, FileText, TrendingUp, Wallet, RefreshCw } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,6 +16,8 @@ import AddExpenseDialog from "@/components/AddExpenseDialog";
 import AddPaymentMethodDialog from "@/components/AddPaymentMethodDialog";
 import AddTransferDialog from "@/components/AddTransferDialog";
 import EditExpenseDialog from "@/components/EditExpenseDialog";
+import AddRecurringExpenseDialog from "@/components/AddRecurringExpenseDialog";
+import ManageRecurringExpensesDialog from "@/components/ManageRecurringExpensesDialog";
 import FloatingAddButton from "@/components/FloatingAddButton";
 import PayInvoiceDialog from "@/components/PayInvoiceDialog";
 import { api } from "@/lib/api";
@@ -134,6 +136,27 @@ function Home() {
     }
   };
 
+  const handleMarkAsPaid = async (expense) => {
+    try {
+      await api(`/expenses/${expense.id}/pay`, { method: "POST" });
+      refreshData();
+      toast({ title: "Despesa marcada como paga com sucesso." });
+    } catch (error) {
+      toast({ title: "Erro ao marcar como paga", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleCreateRecurringExpense = async (payload) => {
+    try {
+      await api("/recurring-expenses", { method: "POST", body: JSON.stringify(payload) });
+      refreshData();
+      setDialog(null);
+      toast({ title: "Despesa fixa criada com sucesso." });
+    } catch (error) {
+      toast({ title: "Erro ao criar despesa fixa", description: error.message, variant: "destructive" });
+    }
+  };
+
   const openEdit = (expense) => {
     setExpenseToEdit(expense);
     setDialog("edit");
@@ -169,7 +192,13 @@ function Home() {
                 <DropdownMenuItem onClick={() => setDialog("boleto")} className="gap-2 p-3">
                   <Barcode className="h-4 w-4 text-red-500" /> Pagar Boleto
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setDialog("method")} className="gap-2 border-t p-3">
+                <DropdownMenuItem onClick={() => setDialog("recurring")} className="gap-2 p-3">
+                  <RefreshCw className="h-4 w-4 text-cyan-500" /> Nova Despesa Fixa
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDialog("manage-recurring")} className="gap-2 border-t p-3">
+                  <Wallet className="h-4 w-4 text-indigo-500" /> Gerenciar Despesas Fixas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDialog("method")} className="gap-2 p-3">
                   <Wallet className="h-4 w-4 text-orange-500" /> Novo Cartão/Conta
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -185,6 +214,7 @@ function Home() {
               onUpdateBalance={handleUpdateBalance}
               onEditExpense={openEdit}
               onDeleteExpense={handleDeleteExpense}
+              onMarkAsPaid={handleMarkAsPaid}
               selectedMonth={selectedMonth}
               onMonthChange={setSelectedMonth}
             />
@@ -208,6 +238,8 @@ function Home() {
         <AddTransferDialog open={dialog === "transfer"} onOpenChange={(open) => !open && setDialog(null)} onAddTransfer={handleCreateTransaction} paymentMethods={dashboard.payment_methods} />
         <PayInvoiceDialog open={dialog === "invoice"} onOpenChange={(open) => !open && setDialog(null)} paymentMethods={dashboard.payment_methods} invoices={dashboard.invoices} onConfirmPayment={handlePayInvoice} />
         <AddPaymentMethodDialog open={dialog === "method"} onOpenChange={(open) => !open && setDialog(null)} onAddPaymentMethod={handleCreatePaymentMethod} />
+        <AddRecurringExpenseDialog open={dialog === "recurring"} onOpenChange={(open) => !open && setDialog(null)} onAddRecurringExpense={handleCreateRecurringExpense} paymentMethods={dashboard.payment_methods} />
+        <ManageRecurringExpensesDialog open={dialog === "manage-recurring"} onOpenChange={(open) => !open && setDialog(null)} paymentMethods={dashboard.payment_methods} onRefresh={refreshData} />
         <EditExpenseDialog open={dialog === "edit"} onOpenChange={(open) => !open && setDialog(null)} onSave={handleSaveExpense} paymentMethods={dashboard.payment_methods} expense={expenseToEdit} />
       </div>
     </Layout>
