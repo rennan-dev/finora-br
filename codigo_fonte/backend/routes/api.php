@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\PaymentMethodController;
+use App\Http\Controllers\Api\RecurringExpenseController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:auth')->group(function () {
@@ -23,7 +24,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/dashboard/evolution', [DashboardController::class, 'evolution']);
     Route::apiResource('payment-methods', PaymentMethodController::class);
     Route::get('/expenses/export', [ExpenseController::class, 'exportPdf']);
+    Route::post('/expenses/{expense}/pay', [ExpenseController::class, 'pay']);
     Route::apiResource('expenses', ExpenseController::class);
+    Route::apiResource('recurring-expenses', RecurringExpenseController::class);
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
     Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'pay'])

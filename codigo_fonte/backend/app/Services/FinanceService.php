@@ -10,12 +10,10 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class FinanceService
-{
-    public function createPaymentMethod(User $user, array $data): PaymentMethod
-    {
+class FinanceService {
+    public function createPaymentMethod(User $user, array $data): PaymentMethod {
         return DB::transaction(function () use ($user, $data): PaymentMethod {
-            if (($data['is_favorite'] ?? false) === true) {
+            if(($data['is_favorite'] ?? false) === true) {
                 $user->paymentMethods()->update(['is_favorite' => false]);
             }
 
@@ -27,8 +25,7 @@ class FinanceService
         });
     }
 
-    public function updatePaymentMethod(User $user, PaymentMethod $method, array $data): PaymentMethod
-    {
+    public function updatePaymentMethod(User $user, PaymentMethod $method, array $data): PaymentMethod {
         return DB::transaction(function () use ($user, $method, $data): PaymentMethod {
             $method = PaymentMethod::query()
                 ->whereKey($method->id)
@@ -36,7 +33,7 @@ class FinanceService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if (($data['is_favorite'] ?? false) === true) {
+            if(($data['is_favorite'] ?? false) === true) {
                 $user->paymentMethods()->where('id', '!=', $method->id)->update(['is_favorite' => false]);
             }
 
@@ -47,8 +44,7 @@ class FinanceService
         });
     }
 
-    public function deactivatePaymentMethod(User $user, PaymentMethod $method): void
-    {
+    public function deactivatePaymentMethod(User $user, PaymentMethod $method): void {
         DB::transaction(function () use ($user, $method): void {
             $method = PaymentMethod::query()
                 ->whereKey($method->id)
@@ -63,8 +59,7 @@ class FinanceService
         });
     }
 
-    public function createExpense(User $user, array $data): Expense
-    {
+    public function createExpense(User $user, array $data): Expense {
         return DB::transaction(function () use ($user, $data): Expense {
             $type = $data['type'];
             $method = $this->lockedMethod($user, $data['payment_method_id']);
@@ -78,6 +73,8 @@ class FinanceService
                 ? $this->resolveInvoice($user, $method, $date, $data['invoice_id'] ?? null)
                 : null;
 
+            $isPaid = $data['is_paid'] ?? ($type !== 'fixed_expense');
+
             $expense = $user->expenses()->create([
                 'payment_method_id' => $method->id,
                 'destination_payment_method_id' => $destinationMethod?->id,
@@ -86,9 +83,12 @@ class FinanceService
                 'amount' => $data['amount'],
                 'transaction_date' => $date->toDateString(),
                 'type' => $type,
+                'is_paid' => $isPaid,
             ]);
 
-            $this->applyBalanceEffect($expense, 1);
+            if($isPaid) {
+                $this->applyBalanceEffect($expense, 1);
+            }
 
             $expense->load(['paymentMethod', 'destinationPaymentMethod', 'invoice.paymentMethod']);
             $expense->invoice?->loadSum(
@@ -100,8 +100,7 @@ class FinanceService
         });
     }
 
-    public function updateExpense(User $user, Expense $expense, array $data): Expense
-    {
+    public function updateExpense(User $user, Expense $expense, array $data): Expense {
         return DB::transaction(function () use ($user, $expense, $data): Expense {
             $expense = Expense::query()
                 ->whereKey($expense->id)
@@ -109,11 +108,11 @@ class FinanceService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($expense->type === 'invoice_payment') {
+            if($expense->type === 'invoice_payment') {
                 $this->validationError('expense', 'O pagamento de uma fatura não pode ser editado.');
             }
 
-            if ($expense->type === 'credit' && $expense->invoice?->status === 'paid') {
+            if($expense->type === 'credit' && $expense->invoice?->status === 'paid') {
                 $this->validationError('expense', 'Não é possível editar uma compra de fatura já paga.');
             }
 
@@ -129,7 +128,7 @@ class FinanceService
             $date = Carbon::parse($data['transaction_date'] ?? $expense->transaction_date)->startOfDay();
             $invoice = null;
 
-            if ($expense->type === 'credit') {
+            if($expense->type === 'credit') {
                 $invoice = $this->resolveInvoice(
                     $user,
                     $method,
@@ -162,8 +161,7 @@ class FinanceService
         });
     }
 
-    public function deleteExpense(User $user, Expense $expense): void
-    {
+    public function deleteExpense(User $user, Expense $expense): void {
         DB::transaction(function () use ($user, $expense): void {
             $expense = Expense::query()
                 ->whereKey($expense->id)
@@ -171,11 +169,11 @@ class FinanceService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($expense->type === 'invoice_payment') {
+            if($expense->type === 'invoice_payment') {
                 $this->validationError('expense', 'O pagamento de uma fatura não pode ser excluído.');
             }
 
-            if ($expense->type === 'credit' && $expense->invoice?->status === 'paid') {
+            if($expense->type === 'credit' && $expense->invoice?->status === 'paid') {
                 $this->validationError('expense', 'Não é possível excluir uma compra de fatura já paga.');
             }
 
@@ -184,8 +182,30 @@ class FinanceService
         });
     }
 
-    public function payInvoice(User $user, Invoice $invoice, array $data): Invoice
-    {
+    public function markExpenseAsPaid(User $user, Expense $expense): Expense {
+        return DB::transaction(function () use ($user, $expense): Expense {
+            $expense = Expense::query()
+                ->whereKey($expense->id)
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if(!in_array($expense->type, ['debit', 'boleto', 'fixed_expense'])) {
+                $this->validationError('expense', 'Apenas despesas de débito, boleto ou despesas fixas podem ser marcadas como pagas.');
+            }
+
+            if($expense->is_paid) {
+                $this->validationError('expense', 'Esta despesa já foi paga.');
+            }
+
+            $expense->update(['is_paid' => true]);
+            $this->applyBalanceEffect($expense, 1);
+
+            return $expense->fresh()->load(['paymentMethod', 'destinationPaymentMethod', 'invoice.paymentMethod']);
+        });
+    }
+
+    public function payInvoice(User $user, Invoice $invoice, array $data): Invoice {
         return DB::transaction(function () use ($user, $invoice, $data): Invoice {
             $invoice = Invoice::query()
                 ->whereKey($invoice->id)
@@ -193,13 +213,13 @@ class FinanceService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($invoice->status !== 'open') {
+            if($invoice->status !== 'open') {
                 $this->validationError('invoice', 'Esta fatura já foi paga.');
             }
 
             $paymentMethod = $this->lockedMethod($user, $data['payment_method_id']);
             $total = $invoice->expenses()->where('type', 'credit')->sum('amount');
-            if ((float) $total <= 0) {
+            if((float) $total <= 0) {
                 $this->validationError('invoice', 'Não é possível pagar uma fatura sem compras.');
             }
 
@@ -237,9 +257,8 @@ class FinanceService
         ?int $invoiceId,
         ?int $referenceYear = null,
         ?int $referenceMonth = null,
-    ): Invoice
-    {
-        if ($invoiceId !== null) {
+    ): Invoice {
+        if($invoiceId !== null) {
             $invoice = Invoice::query()
                 ->whereKey($invoiceId)
                 ->where('user_id', $user->id)
@@ -247,7 +266,7 @@ class FinanceService
                 ->lockForUpdate()
                 ->first();
 
-            if (! $invoice || $invoice->status !== 'open') {
+            if(! $invoice || $invoice->status !== 'open') {
                 $this->validationError('invoice_id', 'Selecione uma fatura aberta do mesmo cartão.');
             }
 
@@ -267,7 +286,7 @@ class FinanceService
             ->get();
 
         $openInvoice = $invoices->firstWhere('status', 'open');
-        if ($openInvoice) {
+        if($openInvoice) {
             return $openInvoice;
         }
 
@@ -280,8 +299,7 @@ class FinanceService
         ])->refresh();
     }
 
-    private function lockedMethod(User $user, int $methodId): PaymentMethod
-    {
+    private function lockedMethod(User $user, int $methodId): PaymentMethod {
         $method = PaymentMethod::query()
             ->whereKey($methodId)
             ->where('user_id', $user->id)
@@ -289,49 +307,45 @@ class FinanceService
             ->lockForUpdate()
             ->first();
 
-        if (! $method) {
+        if(! $method) {
             $this->validationError('payment_method_id', 'Método de pagamento inválido, inativo ou não pertencente ao usuário.');
         }
 
         return $method;
     }
 
-    private function assertMethodCompatibility(string $type, PaymentMethod $method, ?PaymentMethod $destinationMethod): void
-    {
+    private function assertMethodCompatibility(string $type, PaymentMethod $method, ?PaymentMethod $destinationMethod): void {
         $valid = $type === 'transfer'
             ? $destinationMethod !== null
             : $destinationMethod === null;
 
-        if (! $valid) {
+        if(! $valid) {
             $this->validationError('destination_payment_method_id', 'Informe um destino apenas para transferências.');
         }
     }
 
-    private function applyBalanceEffect(Expense $expense, int $direction): void
-    {
+    private function applyBalanceEffect(Expense $expense, int $direction): void {
         $amount = (float) $expense->amount;
 
         match ($expense->type) {
-            'debit', 'boleto', 'invoice_payment' => $this->changeBalance($expense->payment_method_id, -$amount * $direction),
+            'debit', 'boleto', 'invoice_payment', 'fixed_expense' => $this->changeBalance($expense->payment_method_id, -$amount * $direction),
             'deposit' => $this->changeBalance($expense->payment_method_id, $amount * $direction),
             'transfer' => $this->applyTransferBalanceEffect($expense, $amount, $direction),
             default => null,
         };
     }
 
-    private function applyTransferBalanceEffect(Expense $expense, float $amount, int $direction): void
-    {
+    private function applyTransferBalanceEffect(Expense $expense, float $amount, int $direction): void {
         $this->changeBalance($expense->payment_method_id, -$amount * $direction);
         $this->changeBalance($expense->destination_payment_method_id, $amount * $direction);
     }
 
-    private function changeBalance(?int $methodId, float $delta): void
-    {
-        if ($methodId === null || $delta === 0.0) {
+    private function changeBalance(?int $methodId, float $delta): void {
+        if($methodId === null || $delta === 0.0) {
             return;
         }
 
-        if ($delta > 0) {
+        if($delta > 0) {
             PaymentMethod::query()->whereKey($methodId)->increment('balance', $delta);
 
             return;
@@ -340,8 +354,7 @@ class FinanceService
         PaymentMethod::query()->whereKey($methodId)->decrement('balance', abs($delta));
     }
 
-    private function validationError(string $field, string $message): never
-    {
+    private function validationError(string $field, string $message): never {
         throw ValidationException::withMessages([$field => [$message]]);
     }
 }

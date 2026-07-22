@@ -72,6 +72,16 @@ class ExpenseController extends Controller {
         ]);
     }
 
+    public function pay(Request $request, Expense $expense, FinanceService $finance): JsonResponse {
+        $this->assertOwnership($request, $expense);
+        $expense = $finance->markExpenseAsPaid($request->user(), $expense);
+
+        return response()->json([
+            'message' => 'Despesa marcada como paga com sucesso.',
+            'data' => new ExpenseResource($expense),
+        ]);
+    }
+
     public function destroy(Request $request, Expense $expense, FinanceService $finance): JsonResponse {
         $this->assertOwnership($request, $expense);
         $finance->deleteExpense($request->user(), $expense);
