@@ -19,7 +19,7 @@ function CreateAccount() {
     const password = formData.get("password");
     const confirmPassword = formData.get("confirmPassword");
 
-    if (password !== confirmPassword) {
+    if(password !== confirmPassword) {
       toast({
         variant: "destructive",
         title: "Senhas não coincidem",
@@ -28,7 +28,7 @@ function CreateAccount() {
       return;
     }
 
-    if (!username || !email || !password) {
+    if(!username || !email || !password) {
       toast({
         variant: "destructive",
         title: "Campos obrigatórios",
@@ -55,9 +55,9 @@ function CreateAccount() {
     } catch (error) {
       let errorMessage = "Ocorreu um erro ao criar a conta.";
 
-      if (error.response?.data?.message) {
+      if(error.response?.data?.message) {
         errorMessage = error.response.data.message;
-      } else if (error.message) {
+      }else if(error.message) {
         errorMessage = error.message;
       }
 
@@ -97,7 +97,7 @@ function CreateAccount() {
             <Label htmlFor="password">Senha</Label>
             <Input id="password" name="password" type="password" required />
             <small className="text-xs text-muted-foreground">
-              Use ao menos 12 caracteres, letras maiúsculas/minúsculas, números e símbolos.
+              Use ao menos 8 caracteres, letras maiúsculas/minúsculas, números e símbolos.
             </small>
           </div>
 
