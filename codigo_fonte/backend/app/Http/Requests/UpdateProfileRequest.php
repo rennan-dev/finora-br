@@ -28,7 +28,7 @@ class UpdateProfileRequest extends FormRequest
         return [
             'username' => ['sometimes', 'required', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/', Rule::unique('users', 'username')->ignore($userId)],
             'email' => ['sometimes', 'required', 'string', 'email:rfc', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
-            'password' => ['sometimes', 'required', 'string', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()],
+            'password' => ['sometimes', 'required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'current_password' => ['nullable', 'required_with:password', 'current_password'],
         ];
     }
