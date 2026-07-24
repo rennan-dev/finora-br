@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, saveSession } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
 
 function CreateAccount() {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,18 +19,26 @@ function CreateAccount() {
     const password = formData.get("password");
     const confirmPassword = formData.get("confirmPassword");
 
-    if (password !== confirmPassword) {
-      window.alert("Erro: As senhas não coincidem");
+    if(password !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Senhas não coincidem",
+        description: "As senhas informadas não são iguais.",
+      });
       return;
     }
 
-    if (!username || !email || !password) {
-      window.alert("Erro: Por favor, preencha todos os campos");
+    if(!username || !email || !password) {
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos.",
+      });
       return;
     }
 
     try {
-      const response = await api("/register", {
+      const data = await api("/register", {
         method: "POST",
         body: JSON.stringify({
           username,
@@ -38,13 +48,24 @@ function CreateAccount() {
         }),
       });
       saveSession({
-        user: response.data.user,
-        token: response.data.token.plain_text_token,
+        user: data.data.user,
+        token: data.data.token.plain_text_token,
       });
       navigate("/home");
     } catch (error) {
-      console.error("Erro ao criar conta:", error);
-      window.alert("Erro: Ocorreu um erro ao criar a conta.");
+      let errorMessage = "Ocorreu um erro ao criar a conta.";
+
+      if(error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }else if(error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Falha no cadastro",
+        description: errorMessage,
+      });
     }
   };
 
@@ -73,12 +94,12 @@ function CreateAccount() {
             <Input id="email" name="email" type="email" placeholder="seu@email.com" required />
           </div>
           <div className="space-y-2">
-  <Label htmlFor="password">Senha</Label>
-  <Input id="password" name="password" type="password" required />
-  <small className="text-xs text-muted-foreground">
-    Use ao menos 12 caracteres, letras maiúsculas/minúsculas, números e símbolos.
-  </small>
-</div>
+            <Label htmlFor="password">Senha</Label>
+            <Input id="password" name="password" type="password" required />
+            <small className="text-xs text-muted-foreground">
+              Use ao menos 8 caracteres, letras maiúsculas/minúsculas, números e símbolos.
+            </small>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirmar Senha</Label>

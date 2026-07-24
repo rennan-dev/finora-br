@@ -6,27 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Expense extends Model
+class RecurringExpense extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'payment_method_id',
-        'destination_payment_method_id',
-        'invoice_id',
+        'user_id',
         'description',
         'amount',
-        'transaction_date',
-        'type',
-        'is_paid',
+        'payment_method_id',
+        'is_active',
     ];
 
     protected function casts(): array
     {
         return [
             'amount' => 'decimal:2',
-            'transaction_date' => 'date',
-            'is_paid' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -38,15 +34,5 @@ class Expense extends Model
     public function paymentMethod(): BelongsTo
     {
         return $this->belongsTo(PaymentMethod::class);
-    }
-
-    public function destinationPaymentMethod(): BelongsTo
-    {
-        return $this->belongsTo(PaymentMethod::class, 'destination_payment_method_id');
-    }
-
-    public function invoice(): BelongsTo
-    {
-        return $this->belongsTo(Invoice::class);
     }
 }
