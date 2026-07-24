@@ -81,17 +81,10 @@ const originalFetch = window.fetch;
 
 window.fetch = async function(...args) {
 	return originalFetch.apply(this, args)
-		.then(async response => {
-			if(!response.ok) {
-				const errorFromRes = await response.text();
-				console.error(errorFromRes);
-			}
-
+		.then(response => {
 			return response;
 		})
 		.catch(error => {
-			console.error(error);
-
 		throw error;
 	});
 };
@@ -141,6 +134,12 @@ export default defineConfig({
 			'Cross-Origin-Embedder-Policy': 'credentialless',
 		},
 		allowedHosts: true,
+		proxy: {
+			'/api': {
+				target: 'http://localhost:8000',
+				changeOrigin: true,
+			},
+		},
 	},
 	resolve: {
 		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json', ],

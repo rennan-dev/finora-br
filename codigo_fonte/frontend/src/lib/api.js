@@ -23,7 +23,7 @@ export const clearSession = () => {
 };
 
 export const getPaymentMethods = async ({ force = false } = {}) => {
-  if (!force && cachedPaymentMethods) return cachedPaymentMethods;
+  if(!force && cachedPaymentMethods) return cachedPaymentMethods;
 
   const response = await api("/payment-methods");
   cachedPaymentMethods = response.data;
@@ -39,10 +39,10 @@ export async function api(path, options = {}) {
   const headers = new Headers(options.headers);
 
   headers.set("Accept", "application/json");
-  if (options.body && !headers.has("Content-Type")) {
+  if(options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (token) {
+  if(token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
@@ -51,15 +51,39 @@ export async function api(path, options = {}) {
     headers,
   });
 
-  const payload = await response.json().catch(() => ({}));
-
-  if (response.status === 401) {
+  if(response.status === 401) {
     clearSession();
   }
 
-  if (!response.ok) {
-    const firstError = Object.values(payload.errors || {}).flat()[0];
-    throw new Error(firstError || payload.message || "Não foi possível concluir a solicitação.");
+  let bodyText = "";
+  try {
+    bodyText = await response.text();
+  }catch (e) {
+    console.warn("Não foi possível ler o corpo da resposta.", e);
+  }
+
+  let payload = {};
+  try {
+    payload = JSON.parse(bodyText);
+  }catch (e) { }
+
+  if(!response.ok) {
+    let errorMessage = "Não foi possível concluir a solicitação.";
+    
+    if(payload) {
+      if(payload.errors && typeof payload.errors === 'object') {
+        const errorsList = Object.values(payload.errors).flat();
+        if(errorsList.length > 0) {
+          errorMessage = errorsList[0];
+        }
+      }else if(payload.message) {
+        errorMessage = payload.message;
+      }
+    }
+    
+    const customError = new Error(errorMessage);
+    customError.response = { data: payload };
+    throw customError;
   }
 
   return payload;

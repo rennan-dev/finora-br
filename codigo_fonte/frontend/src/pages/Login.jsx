@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, saveSession } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast"; 
 
 function Login() {
   const navigate = useNavigate();
+  const { toast } = useToast(); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,21 +19,37 @@ function Login() {
 
     if (email && password) {
       try {
-        const response = await api("/login", {
+        const data = await api("/login", {
           method: "POST",
           body: JSON.stringify({ email, password, device_name: "financas-web" }),
         });
 
         saveSession({
-          user: response.data.user,
-          token: response.data.token.plain_text_token,
+          user: data.data.user,
+          token: data.data.token.plain_text_token,
         });
         navigate("/home");
-      } catch (error) {
-        window.alert(`Erro: ${error.message}`);
+      }catch (error) {
+        let errorMessage = "Ocorreu um erro ao tentar fazer login.";
+        
+        if(error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        }else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        toast({
+          variant: "destructive",
+          title: "Falha no login",
+          description: errorMessage,
+        });
       }
-    } else {
-      window.alert("Por favor, preencha todos os campos");
+    }else {
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos antes de continuar.",
+      });
     }
   };
 
