@@ -74,7 +74,7 @@ function Home() {
       await api("/expenses", { method: "POST", body: JSON.stringify(payload) });
       refreshData();
       setDialog(null);
-      toast({ title: "Transação registada com sucesso." });
+      toast({ title: "Transação registada com sucesso.", variant: "success" });
     } catch (error) {
       toast({ title: "Erro ao registar", description: error.message, variant: "destructive" });
     }
@@ -107,7 +107,7 @@ function Home() {
       await api("/payment-methods", { method: "POST", body: JSON.stringify(payload) });
       refreshData();
       setDialog(null);
-      toast({ title: "Método criado com sucesso." });
+      toast({ title: "Método criado com sucesso.", variant: "success" });
     } catch (error) {
       toast({ title: "Erro ao criar método", description: error.message, variant: "destructive" });
     }
@@ -128,7 +128,7 @@ function Home() {
       await api(`/invoices/${invoiceId}/pay`, { method: "POST", body: JSON.stringify(payload) });
       refreshData();
       setDialog(null);
-      toast({ title: "Fatura paga com sucesso." });
+      toast({ title: "Fatura paga com sucesso.", variant: "success" });
       return true;
     } catch (error) {
       toast({ title: "Erro ao pagar fatura", description: error.message, variant: "destructive" });
@@ -151,7 +151,7 @@ function Home() {
       await api("/recurring-expenses", { method: "POST", body: JSON.stringify(payload) });
       refreshData();
       setDialog(null);
-      toast({ title: "Despesa fixa criada com sucesso." });
+      toast({ title: "Despesa fixa criada com sucesso.", variant: "success" });
     } catch (error) {
       toast({ title: "Erro ao criar despesa fixa", description: error.message, variant: "destructive" });
     }
