@@ -85,7 +85,7 @@ function Home() {
       await api(`/expenses/${expense.id}`, { method: "PATCH", body: JSON.stringify(expense) });
       refreshData();
       setDialog(null);
-      toast({ title: "Transação atualizada com sucesso." });
+      toast({ title: "Transação atualizada com sucesso.", variant: "success" });
     } catch (error) {
       toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
     }
@@ -96,7 +96,7 @@ function Home() {
     try {
       await api(`/expenses/${expense.id}`, { method: "DELETE" });
       refreshData();
-      toast({ title: "Transação excluída." });
+      toast({ title: "Transação excluída.", variant: "success" });
     } catch (error) {
       toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     }
