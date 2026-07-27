@@ -34,12 +34,13 @@ function AddPaymentMethodDialog({ open, onOpenChange, onAddPaymentMethod }) {
               name="name"
               required
               placeholder="Ex: Conta Nubank"
+              className="text-[16px]"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="balance">Saldo inicial</Label>
-            <Input id="balance" name="balance" type="number" step="0.01" defaultValue="0" />
+            <Input id="balance" name="balance" type="number" step="0.01" defaultValue="0" className="text-[16px]" />
           </div>
 
           <label className="flex items-center gap-2 text-sm">

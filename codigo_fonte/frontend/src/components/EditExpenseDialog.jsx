@@ -82,6 +82,7 @@ function EditExpenseDialog({ open, onOpenChange, onSave, paymentMethods, expense
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
+              className="text-[16px]"
             />
           </div>
           
@@ -94,6 +95,7 @@ function EditExpenseDialog({ open, onOpenChange, onSave, paymentMethods, expense
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               required
+              className="text-[16px]"
             />
           </div>
 
@@ -105,6 +107,7 @@ function EditExpenseDialog({ open, onOpenChange, onSave, paymentMethods, expense
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
+              className="text-[16px]"
             />
           </div>
 

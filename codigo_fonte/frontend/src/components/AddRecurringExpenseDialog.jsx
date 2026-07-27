@@ -51,6 +51,7 @@ function AddRecurringExpenseDialog({
               name="description"
               required
               placeholder="Ex: Netflix, Aluguel, Internet..."
+              className="text-[16px]"
             />
           </div>
 
@@ -63,6 +64,7 @@ function AddRecurringExpenseDialog({
               step="0.01"
               required
               placeholder="0.00"
+              className="text-[16px]"
             />
           </div>
 
