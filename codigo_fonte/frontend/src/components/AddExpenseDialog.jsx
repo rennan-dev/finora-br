@@ -59,6 +59,7 @@ function AddExpenseDialog({
               name="description"
               required
               placeholder="Digite a descrição"
+              className="text-[16px]"
             />
           </div>
 
@@ -70,7 +71,8 @@ function AddExpenseDialog({
               type="number"
               step="0.01"
               required
-              placeholder="0.00"
+              placeholder="0,00"
+              className="text-[16px]"
             />
           </div>
 
@@ -82,6 +84,7 @@ function AddExpenseDialog({
               type="date"
               required
               defaultValue={today}
+              className="text-[16px]"
             />
           </div>
 
