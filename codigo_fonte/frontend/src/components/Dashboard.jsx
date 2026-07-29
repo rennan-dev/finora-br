@@ -120,7 +120,7 @@ function Dashboard({
         <div className="rounded-xl border bg-card p-5">
           <p className="text-sm text-muted-foreground">Saldo disponível</p>
           <p className="mt-1 text-3xl font-bold text-primary">R$ {Number(dashboard.balance).toFixed(2)}</p>
-          <div className="mt-5 space-y-2">
+          <div className="mt-5 space-y-2 max-h-[400px] overflow-y-auto">
             {dashboard.payment_methods.map((method) => (
               <button
                 key={method.id}
@@ -135,10 +135,10 @@ function Dashboard({
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryCard label={openInvoiceLabel} value={openInvoiceTotal} icon={<CreditCard className="h-5 w-5" />} />
-          <SummaryCard label="Débito e boletos" value={summary.debit} icon={<Wallet className="h-5 w-5" />} />
-          <SummaryCard label="Depósitos" value={summary.deposit} icon={<Wallet className="h-5 w-5" />} />
+        <div className="flex flex-col gap-3 h-full">
+          <SummaryCard label={openInvoiceLabel} value={openInvoiceTotal} icon={<CreditCard className="h-5 w-5" />} className="flex-1" />
+          <SummaryCard label="Débito e boletos" value={summary.debit} icon={<Wallet className="h-5 w-5" />} className="flex-1" />
+          <SummaryCard label="Depósitos" value={summary.deposit} icon={<Wallet className="h-5 w-5" />} className="flex-1" />
         </div>
       </section>
 
@@ -317,9 +317,9 @@ function Dashboard({
   );
 }
 
-function SummaryCard({ label, value, icon }) {
+function SummaryCard({ label, value, icon, className }) {
   return (
-    <div className="rounded-xl border bg-muted/40 p-4">
+    <div className={`rounded-xl border bg-muted/40 p-4 ${className || ""}`}>
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         {label} {icon}
       </div>
