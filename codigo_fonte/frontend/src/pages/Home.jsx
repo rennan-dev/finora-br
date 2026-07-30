@@ -229,6 +229,8 @@ function Home() {
           onPayInvoice={() => setDialog("invoice")}
           onAddBoleto={() => setDialog("boleto")}
           onAddPaymentMethod={() => setDialog("method")}
+          onAddRecurringExpense={() => setDialog("recurring")}
+          onManageRecurringExpenses={() => setDialog("manage-recurring")}
         />
 
         <AddExpenseDialog open={dialog === "deposit"} onOpenChange={(open) => !open && setDialog(null)} onAddExpense={handleCreateTransaction} paymentMethods={dashboard.payment_methods} paymentType="deposit" title="Registrar Entrada / Depósito" submitLabel="Fazer Depósito" />
