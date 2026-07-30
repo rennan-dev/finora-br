@@ -7,7 +7,8 @@ import {
   ArrowRightLeft, 
   FileText, 
   Barcode, 
-  Wallet 
+  Wallet,
+  RefreshCw 
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -16,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-function FloatingAddButton({ onAddDeposit, onAddExpense, onAddCreditExpense, onAddTransfer, onPayInvoice, onAddBoleto, onAddPaymentMethod }) {
+function FloatingAddButton({ onAddDeposit, onAddExpense, onAddCreditExpense, onAddTransfer, onPayInvoice, onAddBoleto, onAddPaymentMethod, onAddRecurringExpense, onManageRecurringExpenses }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -53,6 +54,16 @@ function FloatingAddButton({ onAddDeposit, onAddExpense, onAddCreditExpense, onA
         <DropdownMenuItem onClick={onAddBoleto} className="cursor-pointer gap-2 p-3">
           <Barcode className="h-4 w-4 text-red-500" />
           <span>Pagar Boleto</span>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem onClick={onAddRecurringExpense} className="cursor-pointer gap-2 p-3">
+          <RefreshCw className="h-4 w-4 text-cyan-500" />
+          <span>Nova Despesa Fixa</span>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem onClick={onManageRecurringExpenses} className="cursor-pointer gap-2 p-3 border-t">
+          <Wallet className="h-4 w-4 text-indigo-500" />
+          <span>Gerenciar Despesas Fixas</span>
         </DropdownMenuItem>
         
         <DropdownMenuItem onClick={onAddPaymentMethod} className="cursor-pointer gap-2 p-3 border-t">
