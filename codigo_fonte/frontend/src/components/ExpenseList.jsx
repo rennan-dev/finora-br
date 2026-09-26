@@ -54,15 +54,15 @@ function ExpenseList({ expenses, selectedTypes = [], selectedAccounts = [], onEd
           return (
             <div
               key={expense.id}
-              className={`flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:justify-between ${
+              className={`flex flex-col gap-3 rounded-lg border bg-card p-3 md:flex-row md:items-center md:justify-between md:p-4 ${
                 expense.type === "fixed_expense" && expense.is_paid === false
                   ? "border-yellow-300 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/20"
                   : ""
               }`}
             >
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium">{expense.description}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="break-words font-medium">{expense.description}</h3>
                   {expense.type === "fixed_expense" && expense.is_paid === false && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
                       <Clock className="h-3 w-3" /> Pendente
@@ -99,7 +99,7 @@ function ExpenseList({ expenses, selectedTypes = [], selectedAccounts = [], onEd
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex w-full items-center justify-between gap-3 md:w-auto">
                 <strong>R$ {Number(expense.amount).toFixed(2)}</strong>
                 {editable && (
                   <DropdownMenu>

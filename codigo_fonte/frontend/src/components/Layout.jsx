@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,9 +9,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserCircle } from "lucide-react";
 import { api, clearSession, getStoredUser } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+const desktopLinks = [
+  { label: "Compras", path: "/home" },
+  { label: "Faturas", path: "/invoices" },
+  { label: "Gráficos", path: "/charts" },
+  { label: "Cartões", path: "/cards" },
+];
 
 function Layout({ children }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const user = getStoredUser() || {};
 
   const handleLogout = async () => {
@@ -30,19 +39,33 @@ function Layout({ children }) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
           <h1
             className="text-2xl font-bold text-primary cursor-pointer"
             onClick={() => navigate("/home")}
           >
             Finora BR
           </h1>
+
+          <nav aria-label="Atalhos de navegação" className="hidden items-center gap-1 md:flex">
+            {desktopLinks.map((link) => (
+              <Button
+                key={link.path}
+                variant="ghost"
+                className={cn("gap-2", pathname.startsWith(link.path) && "font-semibold text-primary")}
+                onClick={() => navigate(link.path)}
+              >
+                {link.label}
+              </Button>
+            ))}
+          </nav>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 px-2">
-              <UserCircle className="h-6 w-6" />
-              <span className="hidden sm:inline">{user.username || user.email}</span>
-            </Button>
+              <Button variant="ghost" className="flex items-center gap-2 px-2">
+                <UserCircle className="h-6 w-6" />
+                <span className="hidden sm:inline">{user.username || user.email}</span>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => navigate("/profile")}>
@@ -59,9 +82,9 @@ function Layout({ children }) {
         </div>
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
-      <footer className="border-t py-4">
+      <footer className="hidden border-t py-4 md:block">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           © 2025 Rennan Alves. Todos os direitos reservados.
         </div>

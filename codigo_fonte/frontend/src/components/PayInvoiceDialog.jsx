@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function PayInvoiceDialog({ open, onOpenChange, paymentMethods, invoices, onConfirmPayment }) {
+export default function PayInvoiceDialog({ open, onOpenChange, paymentMethods, invoices, onConfirmPayment, initialInvoiceId }) {
   const [invoiceId, setInvoiceId] = useState("");
   const [payingMethodId, setPayingMethodId] = useState("");
   const [isPaying, setIsPaying] = useState(false);
@@ -30,10 +30,10 @@ export default function PayInvoiceDialog({ open, onOpenChange, paymentMethods, i
     if (!initializedForCurrentOpen.current) {
       const favorite = payableMethods.find((method) => method.is_favorite);
       setPayingMethodId(favorite ? favorite.id.toString() : "");
-      setInvoiceId("");
+      setInvoiceId(initialInvoiceId ? initialInvoiceId.toString() : "");
       initializedForCurrentOpen.current = true;
     }
-  }, [open, payableMethods]);
+  }, [open, payableMethods, initialInvoiceId]);
 
   const handlePayment = async () => {
     if (!payingMethodId || !selectedInvoice || selectedInvoice.total_amount <= 0) return;
