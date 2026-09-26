@@ -3,7 +3,8 @@ import { CreditCard, Wallet } from "lucide-react";
 
 /**
  * Cartões/contas com o dinheiro disponível + resumo do mês.
- * No mobile os cartões aparecem em um carrossel horizontal.
+ * No mobile a aba Compras mostra apenas o saldo disponível (contas em lista
+ * vertical); os cards de resumo aparecem a partir de md.
  */
 function BalanceCards({ dashboard, summary, selectedMonth, onSelectMethod }) {
   const nextInvoiceReference = useMemo(
@@ -26,7 +27,7 @@ function BalanceCards({ dashboard, summary, selectedMonth, onSelectMethod }) {
 
   return (
     <section className="grid gap-4 lg:grid-cols-2">
-      <div className="rounded-xl border bg-card p-5">
+      <div className="rounded-xl border bg-card p-4 md:p-5">
         <p className="text-sm text-muted-foreground">Saldo disponível</p>
         <p className="mt-1 text-3xl font-bold text-primary">R$ {Number(dashboard.balance).toFixed(2)}</p>
 
@@ -35,25 +36,26 @@ function BalanceCards({ dashboard, summary, selectedMonth, onSelectMethod }) {
             Nenhum cartão ou conta cadastrado. Adicione um em “Novo Cartão/Conta”.
           </p>
         ) : (
-          <div className="mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:max-h-[400px] md:flex-col md:gap-2 md:overflow-y-auto md:pb-0">
+          <div className="mt-5 flex max-h-[400px] flex-col gap-2 overflow-y-auto">
             {dashboard.payment_methods.map((method) => (
               <button
                 key={method.id}
                 type="button"
                 onClick={() => onSelectMethod?.(method)}
-                className="flex min-w-[160px] shrink-0 snap-start flex-col gap-1 rounded-lg bg-muted/50 p-3 text-left hover:bg-muted md:min-w-0 md:w-full md:flex-row md:items-center md:justify-between"
+                className="flex w-full items-center justify-between gap-2 rounded-lg bg-muted/50 p-3 text-left hover:bg-muted"
               >
-                <span className="flex items-center gap-2 text-sm">
-                  <Wallet className="h-4 w-4" /> {method.name}
+                <span className="flex min-w-0 items-center gap-2 text-sm">
+                  <Wallet className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{method.name}</span>
                 </span>
-                <span className="font-semibold">R$ {Number(method.balance).toFixed(2)}</span>
+                <span className="shrink-0 font-semibold">R$ {Number(method.balance).toFixed(2)}</span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      <div className="flex flex-col gap-3 h-full">
+      <div className="hidden h-full flex-col gap-3 md:flex">
         <SummaryCard label={openInvoiceLabel} value={openInvoiceTotal} icon={<CreditCard className="h-5 w-5" />} className="flex-1" />
         <SummaryCard label="Débito e boletos" value={summary.debit} icon={<Wallet className="h-5 w-5" />} className="flex-1" />
         <SummaryCard label="Depósitos" value={summary.deposit} icon={<Wallet className="h-5 w-5" />} className="flex-1" />

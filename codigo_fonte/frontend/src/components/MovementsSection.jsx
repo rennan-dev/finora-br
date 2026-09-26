@@ -69,7 +69,7 @@ function MovementsSection({ expenses, paymentMethods, selectedMonth, onMonthChan
   };
 
   return (
-    <section className="rounded-xl border bg-card p-5">
+    <section className="rounded-xl border bg-card p-4 md:p-5">
       {/* mobile */}
       <div className="flex flex-col gap-4 md:hidden">
         <h2 className="text-center font-semibold text-xl">Movimentações</h2>
