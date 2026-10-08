@@ -2,14 +2,12 @@ import React, { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { API_URL } from "@/config";
 import ExpenseList from "@/components/ExpenseList";
 import FilterPopover from "@/components/FilterPopover";
 import MonthSelector from "@/components/MonthSelector";
 
-/**
- * Lista de movimentações do mês selecionado, com filtros e exportação em PDF.
- * É o bloco principal da aba "Compras".
- */
+
 function MovementsSection({ expenses, paymentMethods, selectedMonth, onMonthChange, onEdit, onDelete, onMarkAsPaid }) {
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedAccounts, setSelectedAccounts] = useState([]);
@@ -35,7 +33,7 @@ function MovementsSection({ expenses, paymentMethods, selectedMonth, onMonthChan
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/expenses/export?month=${monthStr}`,
+        `${API_URL}/expenses/export?month=${monthStr}`,
         {
           method: 'GET',
           headers: {
