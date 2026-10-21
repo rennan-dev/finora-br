@@ -1,13 +1,44 @@
 import React, { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { CalendarClock, CheckCircle2, CreditCard, FileText } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  CalendarClock,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  CreditCard,
+  FileText,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import InvoiceDetailsDialog from "@/components/InvoiceDetailsDialog";
 import { useTransactions } from "@/components/TransactionProvider";
 
+const MESES_PT = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
 function formatReference(invoice) {
   return `${String(invoice.reference_month).padStart(2, "0")}/${invoice.reference_year}`;
+}
+
+function formatMonthLabel(invoice) {
+  return `${MESES_PT[invoice.reference_month - 1]}/${invoice.reference_year}`;
+}
+
+function monthKey(invoice) {
+  return `${invoice.reference_year}-${String(invoice.reference_month).padStart(2, "0")}`;
 }
 
 /**
@@ -16,10 +47,40 @@ function formatReference(invoice) {
 function Invoices() {
   const { invoices, openInvoicePayment, openEditExpense, deleteExpense } = useTransactions();
   const [invoiceInDetails, setInvoiceInDetails] = useState(null);
+  const [expandedMonthKey, setExpandedMonthKey] = useState(null);
 
-  const openInvoices = useMemo(() => invoices.filter((invoice) => invoice.status === "open"), [invoices]);
-  const closedInvoices = useMemo(() => invoices.filter((invoice) => invoice.status === "paid"), [invoices]);
+  const openInvoices = useMemo(() => invoices.filter((invoice) => invoice.status === "open"), [
+    invoices,
+  ]);
+  const closedInvoices = useMemo(() => invoices.filter((invoice) => invoice.status === "paid"), [
+    invoices,
+  ]);
   const openInvoicesTotal = openInvoices.reduce((total, invoice) => total + Number(invoice.total_amount), 0);
+
+  // Ordena do mês mais recente para o mais antigo (ano desc, mês desc).
+  const sortedOpenInvoices = useMemo(
+    () =>
+      [...openInvoices].sort((a, b) => {
+        if (b.reference_year !== a.reference_year) {
+          return b.reference_year - a.reference_year;
+        }
+        return b.reference_month - a.reference_month;
+      }),
+    [openInvoices]
+  );
+
+  // Agrupa as faturas abertas pelo mês de referência.
+  const groups = useMemo(() => {
+    const map = new Map();
+    for (const invoice of sortedOpenInvoices) {
+      const key = monthKey(invoice);
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key).push(invoice);
+    }
+    return [...map.entries()];
+  }, [sortedOpenInvoices]);
 
   return (
     <Layout>
@@ -46,33 +107,72 @@ function Invoices() {
               <EmptyMessage message="Nenhuma fatura aberta no momento." />
             ) : (
               <div className="space-y-3">
-                {openInvoices.map((invoice) => (
-                  <article key={invoice.id} className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                    <InvoiceHeader
-                      invoice={invoice}
-                      subtitle="Fatura em aberto"
-                    />
+                {groups.map(([key, invoicesInMonth]) => {
+                  const monthLabel = formatMonthLabel(invoicesInMonth[0]);
+                  const monthTotal = invoicesInMonth.reduce(
+                    (total, invoice) => total + Number(invoice.total_amount),
+                    0
+                  );
+                  const isExpanded = expandedMonthKey === key;
 
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setInvoiceInDetails(invoice)}
+                  return (
+                    <article key={key} className="rounded-lg border bg-muted/30 p-4">
+                      <div
+                        onClick={() => setExpandedMonthKey(isExpanded ? null : key)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setExpandedMonthKey(isExpanded ? null : key);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer select-none flex items-center justify-between gap-2"
                       >
-                        <FileText className="h-4 w-4" /> Ver compras
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="gap-2"
-                        disabled={Number(invoice.total_amount) <= 0}
-                        onClick={() => openInvoicePayment(invoice)}
-                      >
-                        <CreditCard className="h-4 w-4" /> Pagar fatura
-                      </Button>
-                    </div>
-                  </article>
-                ))}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{monthLabel}</span>
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                              {invoicesInMonth.length} fatura{
+                                invoicesInMonth.length > 1 ? "s" : ""
+                              }
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">Total do mês</span>
+                        </div>
+                        <div className="whitespace-nowrap text-lg font-bold">
+                          R$ {monthTotal.toFixed(2)}
+                        </div>
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            className="mt-3 space-y-3"
+                          >
+                            {invoicesInMonth.map((invoice) => (
+                              <InvoiceCard
+                                key={invoice.id}
+                                invoice={invoice}
+                                showReference={false}
+                                onView={() => setInvoiceInDetails(invoice)}
+                                onPay={() => openInvoicePayment(invoice)}
+                              />
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -132,15 +232,43 @@ function Invoices() {
   );
 }
 
-function InvoiceHeader({ invoice, subtitle }) {
+function InvoiceCard({ invoice, showReference = true, onView, onPay }) {
+  return (
+    <article className="space-y-3 rounded-lg border bg-muted/30 p-4">
+      <InvoiceHeader invoice={invoice} subtitle="Fatura em aberto" showReference={showReference} />
+
+      <div className="flex flex-wrap gap-2">
+        {onView && (
+          <Button variant="outline" size="sm" className="gap-2" onClick={onView}>
+            <FileText className="h-4 w-4" /> Ver compras
+          </Button>
+        )}
+        {onPay && (
+          <Button
+            size="sm"
+            className="gap-2"
+            disabled={Number(invoice.total_amount) <= 0}
+            onClick={onPay}
+          >
+            <CreditCard className="h-4 w-4" /> Pagar fatura
+          </Button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function InvoiceHeader({ invoice, subtitle, showReference = true }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-medium">{invoice.payment_method?.name || "Cartão"}</h3>
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {formatReference(invoice)}
-          </span>
+          {showReference && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {formatReference(invoice)}
+            </span>
+          )}
           {invoice.cycle > 1 && (
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
               Ciclo {invoice.cycle}
