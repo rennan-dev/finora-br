@@ -48,6 +48,7 @@ function Invoices() {
   const { invoices, openInvoicePayment, openEditExpense, deleteExpense } = useTransactions();
   const [invoiceInDetails, setInvoiceInDetails] = useState(null);
   const [expandedMonthKey, setExpandedMonthKey] = useState(null);
+  const [expandedClosedMonthKey, setExpandedClosedMonthKey] = useState(null);
 
   const openInvoices = useMemo(() => invoices.filter((invoice) => invoice.status === "open"), [
     invoices,
@@ -55,6 +56,31 @@ function Invoices() {
   const closedInvoices = useMemo(() => invoices.filter((invoice) => invoice.status === "paid"), [
     invoices,
   ]);
+
+  // Ordena do mês mais recente para o mais antigo (ano desc, mês desc).
+  const sortedClosedInvoices = useMemo(
+    () =>
+      [...closedInvoices].sort((a, b) => {
+        if (b.reference_year !== a.reference_year) {
+          return b.reference_year - a.reference_year;
+        }
+        return b.reference_month - a.reference_month;
+      }),
+    [closedInvoices]
+  );
+
+  // Agrupa as faturas fechadas pelo mês de referência.
+  const closedGroups = useMemo(() => {
+    const map = new Map();
+    for (const invoice of sortedClosedInvoices) {
+      const key = monthKey(invoice);
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key).push(invoice);
+    }
+    return [...map.entries()];
+  }, [sortedClosedInvoices]);
   const openInvoicesTotal = openInvoices.reduce((total, invoice) => total + Number(invoice.total_amount), 0);
 
   // Ordena do mês mais recente para o mais antigo (ano desc, mês desc).
@@ -187,32 +213,96 @@ function Invoices() {
               <EmptyMessage message="Nenhuma fatura fechada até agora." />
             ) : (
               <div className="space-y-3">
-                {closedInvoices.map((invoice) => (
-                  <article key={invoice.id} className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                    <InvoiceHeader
-                      invoice={invoice}
-                      subtitle={
-                        <>
-                          {invoice.paid_at
-                            ? `Paga em ${format(new Date(invoice.paid_at), "dd/MM/yyyy")}`
-                            : "Fatura fechada"}
-                          {invoice.paid_from_payment_method?.name
-                            ? ` · Pago com ${invoice.paid_from_payment_method.name}`
-                            : ""}
-                        </>
-                      }
-                    />
+                {closedGroups.map(([key, invoicesInMonth]) => {
+                  const monthLabel = formatMonthLabel(invoicesInMonth[0]);
+                  const monthTotal = invoicesInMonth.reduce(
+                    (total, invoice) => total + Number(invoice.total_amount),
+                    0
+                  );
+                  const isExpanded = expandedClosedMonthKey === key;
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setInvoiceInDetails(invoice)}
-                    >
-                      <FileText className="h-4 w-4" /> Ver compras
-                    </Button>
-                  </article>
-                ))}
+                  return (
+                    <article key={key} className="rounded-lg border bg-muted/30 p-4">
+                      <div
+                        onClick={() => setExpandedClosedMonthKey(isExpanded ? null : key)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setExpandedClosedMonthKey(isExpanded ? null : key);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer select-none flex items-center justify-between gap-2"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{monthLabel}</span>
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                              {invoicesInMonth.length} fatura{
+                                invoicesInMonth.length > 1 ? "s" : ""
+                              }
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">Total do mês</span>
+                        </div>
+                        <div className="whitespace-nowrap text-lg font-bold">
+                          R$ {monthTotal.toFixed(2)}
+                        </div>
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            className="mt-3 space-y-3"
+                          >
+                            {invoicesInMonth.map((invoice) => (
+                              <article
+                                key={invoice.id}
+                                className="space-y-3 rounded-lg border bg-muted/30 p-4"
+                              >
+                                <InvoiceHeader
+                                  invoice={invoice}
+                                  subtitle={
+                                    <>
+                                      {invoice.paid_at
+                                        ? `Paga em ${format(
+                                            new Date(invoice.paid_at),
+                                            "dd/MM/yyyy"
+                                          )}`
+                                        : "Fatura fechada"}
+                                      {invoice.paid_from_payment_method?.name
+                                        ? ` · Pago com ${invoice.paid_from_payment_method.name}`
+                                        : ""}
+                                    </>
+                                  }
+                                  showReference={false}
+                                />
+
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => setInvoiceInDetails(invoice)}
+                                >
+                                  <FileText className="h-4 w-4" /> Ver compras
+                                </Button>
+                              </article>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>
